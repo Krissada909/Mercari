@@ -1,9 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from sqlalchemy import text
-import os
-from .database import engine, Base
+import traceback
+from .database import engine, Base, get_engine
 from .routers import products, orders, views, settings
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -12,9 +13,9 @@ app = FastAPI(title="Stock Manager (Vercel)")
 
 
 def init_db():
-    """สร้างตารางเมื่อจำเป็น — ไม่ให้พังทั้งแอปตอน import ถ้า DB ยังไม่พร้อม"""
-    Base.metadata.create_all(bind=engine)
-    with engine.begin() as conn:
+    eng = engine or get_engine()
+    Base.metadata.create_all(bind=eng)
+    with eng.begin() as conn:
         conn.execute(text(
             "ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_slip_path VARCHAR"
         ))
@@ -32,23 +33,46 @@ def init_db():
 def on_startup():
     try:
         init_db()
+        print("[startup] DB ready")
     except Exception as e:
-        # log ไว้ดูใน Vercel Functions logs
         print(f"[startup] DB init failed: {e}")
+        traceback.print_exc()
 
 
 @app.get("/api/health")
 def health():
+    import os
+    env_keys = [
+        k for k in (
+            "DATABASE_URL",
+            "POSTGRES_URL",
+            "POSTGRES_PRISMA_URL",
+            "POSTGRES_URL_NON_POOLING",
+        )
+        if os.environ.get(k)
+    ]
     try:
-        with engine.connect() as conn:
+        eng = engine or get_engine()
+        with eng.connect() as conn:
             conn.execute(text("SELECT 1"))
-        return {"ok": True, "db": "up"}
+        return {"ok": True, "db": "up", "env_keys": env_keys}
     except Exception as e:
-        return {"ok": False, "db": "down", "error": str(e)}
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "db": "down", "env_keys": env_keys, "error": str(e)},
+        )
 
 
-# บน Vercel filesystem เป็น read-only — ห้าม mkdir
-# รูป/สลิปเก็บเป็น data URI ใน DB อยู่แล้ว ไม่ต้องพึ่ง static upload
+@app.exception_handler(Exception)
+async def unhandled_error(request: Request, exc: Exception):
+    print(f"[error] {request.url.path}: {exc}")
+    traceback.print_exc()
+    return HTMLResponse(
+        f"<h3>Server Error</h3><pre>{exc}</pre>",
+        status_code=500,
+    )
+
+
 static_dir = BASE_DIR / "static"
 if static_dir.exists():
     try:
