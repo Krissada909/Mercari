@@ -1,4 +1,5 @@
 import os
+from urllib.parse import quote_plus
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -25,7 +26,6 @@ def _resolve_database_url() -> str:
         url = url.replace("postgres://", "postgresql://", 1)
 
     # ตัดพารามิเตอร์ที่ SQLAlchemy/psycopg2 ไม่รู้จัก
-    # เช่น pgbouncer=true, supa=...
     if "?" in url:
         base, query = url.split("?", 1)
         keep = []
@@ -44,7 +44,7 @@ def _resolve_database_url() -> str:
 
 DATABASE_URL = _resolve_database_url()
 
-# Vercel serverless + Supabase Pooler
+# Vercel serverless + Supabase Pooler (transaction mode)
 engine = create_engine(
     DATABASE_URL,
     poolclass=NullPool,
