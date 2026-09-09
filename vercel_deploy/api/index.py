@@ -1,25 +1,13 @@
 import sys
 from pathlib import Path
 
+# ให้ import แพ็กเกจ app/ ได้บน Vercel
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-try:
-    from app.main import app  # noqa: F401
-except Exception as e:
-    # ถ้า import พัง ให้มี ASGI app โชว์ error แทน crash เงียบๆ
-    from fastapi import FastAPI
-    from fastapi.responses import HTMLResponse
-    import traceback
+# Vercel ต้องการตัวแปร top-level ชื่อ app / application / handler
+from app.main import app
 
-    app = FastAPI()
-    err = traceback.format_exc()
-    print(err)
-
-    @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
-    async def boot_error(path: str = ""):
-        return HTMLResponse(
-            f"<h2>App failed to start</h2><pre>{e}\n\n{err}</pre>",
-            status_code=500,
-        )
+# เผื่อ runtime บางเวอร์ชันเช็คชื่อ application
+application = app
