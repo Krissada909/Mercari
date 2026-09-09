@@ -63,6 +63,16 @@ def health():
         )
 
 
+@app.get("/api/routes")
+def list_routes():
+    return {
+        "routes": [
+            {"path": getattr(r, "path", None), "name": getattr(r, "name", None)}
+            for r in app.routes
+        ]
+    }
+
+
 @app.exception_handler(Exception)
 async def unhandled_error(request: Request, exc: Exception):
     print(f"[error] {request.url.path}: {exc}")
