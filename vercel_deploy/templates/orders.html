@@ -1,0 +1,733 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .product-picker { position: relative; }
+    .product-search-dropdown {
+        display: none;
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        z-index: 2100;
+        max-height: 260px;
+        overflow-y: auto;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    .product-search-dropdown.show { display: block; }
+    .product-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 10px 12px;
+        border: none;
+        border-bottom: 1px solid #f1f5f9;
+        background: #fff;
+        text-align: left;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+    .product-option:hover, .product-option.active {
+        background: #eff6ff;
+    }
+    .product-option-img {
+        width: 36px;
+        height: 36px;
+        object-fit: cover;
+        border-radius: 6px;
+        border: 1px solid #e2e8f0;
+        flex-shrink: 0;
+    }
+    .product-option-placeholder {
+        width: 36px;
+        height: 36px;
+        border-radius: 6px;
+        background: #e2e8f0;
+        flex-shrink: 0;
+    }
+    #createOrderModal .modal-body { overflow: visible; }
+    .batch-row {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 10px;
+        background-color: #f8fafc;
+    }
+    .item-row { display: flex; align-items: center; padding: 10px 15px; border-bottom: 1px solid #eee; }
+    .item-img { width: 45px; height: 45px; object-fit: cover; border-radius: 8px; margin-right: 12px; border: 1px solid #ddd; }
+    .order-row:hover { background-color: #f8fafc; }
+    .view-item-row {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 12px;
+        background-color: #f8fafc;
+    }
+    .view-item-row .item-img {
+        width: 48px;
+        height: 48px;
+        margin-right: 0;
+    }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold" style="font-size: 1.8rem; color: #0f172a;">
+            <i class="bi bi-cart-check-fill"></i> ขายสินค้า
+        </h2>
+        <p class="text-muted mb-0">สร้างออเดอร์ขายและติดตามประวัติการขาย</p>
+    </div>
+    <button type="button" class="btn btn-success shadow-sm" style="border-radius: 10px; padding: 0.6rem 1.2rem; font-weight: 500;" data-bs-toggle="modal" data-bs-target="#createOrderModal">
+        <i class="bi bi-plus-circle me-1"></i> สร้างออเดอร์ขายใหม่
+    </button>
+</div>
+
+<div class="modal fade" id="createOrderModal" tabindex="-1" data-bs-focus="false" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg" style="border-radius: 15px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-top-left-radius: 15px; border-top-right-radius: 15px;">
+                <h5 class="modal-title fw-bold"><i class="bi bi-cart-plus"></i> สร้างออเดอร์ขายใหม่</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-primary fw-bold">👤 ชื่อลูกค้า</label>
+                        <input type="text" id="customerName" class="form-control bg-light" placeholder="ระบุชื่อลูกค้า..." style="border-radius: 10px;">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-primary fw-bold">📅 วันที่ขาย</label>
+                        <input type="date" id="orderDate" class="form-control bg-light" style="border-radius: 10px;">
+                        <small class="text-muted">เลือกวันที่ขายจริง — ยอดและต้นทุนจะไปอยู่เดือนนั้น และตัดสต็อกทันที</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label class="form-label fw-600 mb-0">เลือกสินค้าให้ครบก่อน แล้วค่อยเพิ่มลงตะกร้าทีเดียว</label>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addBatchRow()">
+                        <i class="bi bi-plus-circle"></i> เพิ่มแถวสินค้า
+                    </button>
+                </div>
+
+                <div id="batchItemsContainer" class="d-grid gap-2 mb-3"></div>
+
+                <template id="batchRowTemplate">
+                    <div class="batch-row row g-2 align-items-end">
+                        <div class="col-md-6">
+                            <label class="form-label fw-600">เลือกสินค้า (พิมพ์เพื่อค้นหา)</label>
+                            <div class="product-picker">
+                                <input type="text" class="form-control bg-light product-search-input" placeholder="พิมพ์ชื่อสินค้าเพื่อค้นหา..." autocomplete="off" style="border-radius: 10px;">
+                                <input type="hidden" class="batch-product-id">
+                                <div class="product-search-dropdown"></div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-600">จำนวน</label>
+                            <input type="number" class="form-control bg-light batch-sell-qty" value="1" min="1" style="border-radius: 10px;">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-600">ราคาขาย/ชิ้น</label>
+                            <input type="number" class="form-control bg-light batch-sell-price" placeholder="0.00" style="border-radius: 10px;">
+                        </div>
+                        <div class="col-md-1 d-grid">
+                            <button type="button" class="btn btn-outline-danger btn-sm remove-row-btn" title="ลบแถวนี้">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+
+                <button type="button" class="btn btn-primary w-100 mb-3" onclick="addBatchToCart()" style="border-radius: 10px;">+ เพิ่มลงตะกร้า</button>
+                <div class="bg-light p-3 rounded" style="border: 1px dashed #cbd5e1;">
+                    <h6 class="fw-bold mb-2">รายการในตะกร้า:</h6>
+                    <ul id="cartList" class="list-group list-group-flush bg-transparent"></ul>
+                </div>
+                <div class="mt-3">
+                    <label class="form-label fw-600"><i class="bi bi-receipt"></i> สลิปโอนเงิน <span class="text-muted fw-normal">(ไม่บังคับ)</span></label>
+                    <input type="file" id="paymentSlip" class="form-control bg-light" accept="image/*,.pdf" style="border-radius: 10px;">
+                    <small class="text-muted">แนบรูปสลิปหรือ PDF ได้ ถ้ามี</small>
+                    <div id="slipPreview" class="mt-2" style="display:none;">
+                        <img id="slipPreviewImg" src="" alt="สลิป" style="max-height: 120px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light" style="border-bottom-left-radius: 15px; border-bottom-right-radius: 15px;">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                <button type="button" class="btn btn-success px-4" onclick="submitOrder()" id="checkoutBtn" disabled>ยืนยันการขาย</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="viewOrderModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg" style="border-radius: 15px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-top-left-radius: 15px; border-top-right-radius: 15px;">
+                <h5 class="modal-title fw-bold"><i class="bi bi-receipt"></i> รายละเอียด Order <span id="viewOrderId"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-primary fw-bold">👤 ชื่อลูกค้า</label>
+                        <input type="text" id="viewCustomerName" class="form-control bg-light" readonly style="border-radius: 10px;">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-primary fw-bold">📅 วันที่ขาย</label>
+                        <input type="text" id="viewOrderDate" class="form-control bg-light" readonly style="border-radius: 10px;">
+                    </div>
+                </div>
+                <hr>
+                <label class="form-label fw-600 mb-2">รายการสินค้าในออเดอร์</label>
+                <div id="viewOrderItemsList" class="d-grid gap-2 mb-3"></div>
+
+                <div class="bg-light p-3 rounded" style="border: 1px dashed #cbd5e1;">
+                    <h6 class="fw-bold mb-3">สรุปยอด</h6>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">ยอดขายรวม:</span>
+                        <strong class="text-success" id="viewTotalRevenue"></strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">ต้นทุนรวม:</span>
+                        <strong class="text-danger" id="viewTotalCost"></strong>
+                    </div>
+                    <div class="d-flex justify-content-between pt-2 border-top">
+                        <span class="fw-bold">กำไรสุทธิ:</span>
+                        <h4 class="fw-bold mb-0" id="viewProfit"></h4>
+                    </div>
+                </div>
+
+                <div id="viewSlipBox" class="mt-3" style="display:none;">
+                    <label class="form-label fw-600"><i class="bi bi-receipt"></i> สลิปโอนเงิน</label>
+                    <div class="bg-light p-3 rounded" style="border: 1px dashed #cbd5e1;">
+                        <a id="viewSlipLink" href="#" target="_blank" class="d-inline-block">
+                            <img id="viewSlipImg" src="" alt="สลิปโอนเงิน" style="max-width: 100%; max-height: 220px; border-radius: 10px; border: 1px solid #e2e8f0; object-fit: contain; background: #fff;">
+                        </a>
+                        <div id="viewSlipPdf" class="mt-1" style="display:none;">
+                            <a id="viewSlipPdfLink" href="#" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-file-earmark-pdf"></i> เปิดไฟล์สลิป (PDF)
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light" style="border-bottom-left-radius: 15px; border-bottom-right-radius: 15px;">
+                <button type="button" class="btn btn-danger me-auto" id="deleteOrderBtn" onclick="deleteCurrentOrder()">
+                    <i class="bi bi-trash"></i> ลบออเดอร์
+                </button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">ปิด</button>
+                <button type="button" class="btn btn-success px-4" id="saveUpdateBtn" onclick="saveOrderUpdates()">
+                    <i class="bi bi-save"></i> บันทึกการแก้ไข
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content shadow-lg" style="border-radius: 15px;">
+            <div class="modal-header bg-dark text-white" style="border-top-left-radius: 15px; border-top-right-radius: 15px;">
+                <h5 class="modal-title fw-bold"><i class="bi bi-image"></i> รูปสินค้า</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0 text-center" style="background-color: #f8fafc;">
+                <img id="modalImage" src="" alt="Product" style="max-width: 100%; max-height: 60vh; object-fit: contain; padding: 20px;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-0" style="border-radius: 12px;">
+            <div class="card-header" style="background: linear-gradient(135deg, #0f172a 0%, #1a202c 100%); color: white; border-top-left-radius: 12px; border-top-right-radius: 12px;">
+                <i class="bi bi-clock-history"></i> ประวัติการขาย (คลิกที่แถวเพื่อดูรายละเอียด)
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    {% if orders %}
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="padding: 1rem;">Order ID</th>
+                                    <th style="padding: 1rem;">วันที่ขาย</th>
+                                    <th style="padding: 1rem;">ชื่อลูกค้า</th>
+                                    <th class="text-end" style="padding: 1rem;">ยอดขายรวม</th>
+                                    <th class="text-end" style="padding: 1rem;">ต้นทุนรวม</th>
+                                    <th class="text-end" style="padding: 1rem; padding-right: 1.5rem;">กำไร</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for o in orders %}
+                                <tr style="cursor: pointer;" class="order-row" onclick="showDetails('{{ o.id }}', '{{ o.customer_name }}', '{{ o.created_at.strftime('%Y-%m-%d') }}', '{{ o.total_revenue }}', '{{ o.total_cost }}', '{{ o.profit }}', '{{ o.id }}')">
+                                    <td style="padding: 1rem;"><span class="badge bg-secondary">#{{ o.id }}</span></td>
+                                    <td class="text-muted small" style="padding: 1rem;">{{ o.created_at.strftime('%Y-%m-%d') }}</td>
+                                    <td style="padding: 1rem;"><strong>{{ o.customer_name if o.customer_name else 'ไม่มีชื่อ' }}</strong></td>
+                                    <td class="text-end text-success" style="padding: 1rem;">฿{{ "%.2f"|format(o.total_revenue) }}</td>
+                                    <td class="text-end text-danger" style="padding: 1rem;">฿{{ "%.2f"|format(o.total_cost) }}</td>
+                                    <td class="text-end fw-bold {{ 'text-success' if o.profit >= 0 else 'text-danger' }}" style="padding: 1rem; padding-right: 1.5rem;">
+                                        {{ '+฿' if o.profit >= 0 else '฿' }}{{ "%.2f"|format(o.profit) }}
+                                    </td>
+                                    
+                                    <script id="data-{{ o.id }}" type="application/json">
+                                    [
+                                        {% for item in o.items %}
+                                        {
+                                            "id": {{ item.id }},  
+                                            "name": {{ item.product.name|tojson }},
+                                            "qty": {{ item.sell_qty }},
+                                            "price": {{ item.sell_price_per_unit }},
+                                            "img": {{ (item.product.image_path if item.product.image_path else '')|tojson }}
+                                        }{% if not loop.last %},{% endif %}
+                                        {% endfor %}
+                                    ]
+                                    </script>
+                                    <script id="slip-{{ o.id }}" type="application/json">{{ (o.payment_slip_path or '')|tojson }}</script>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-receipt fs-1 d-block mb-2 opacity-25"></i>
+                            ยังไม่มีประวัติการขาย
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script id="productsCatalog" type="application/json">
+[
+{%- for p in products if p.weight_cost_thb > 0 -%}
+{
+    "id": {{ p.id }},
+    "name": {{ p.name|tojson }},
+    "cost": {{ p.unit_cost_thb }},
+    "max": {{ p.qty }},
+    "img": {{ (p.image_path or '')|tojson }},
+    "label": {{ ("%s (เหลือ %s | ทุน ฿%.2f)"|format(p.name, p.qty, p.unit_cost_thb))|tojson }}
+}{%- if not loop.last %},{%- endif -%}
+{%- endfor -%}
+]
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const PRODUCTS = JSON.parse(document.getElementById('productsCatalog').textContent);
+    let currentEditingOrderId = null;
+    let cart = [];
+    let activePicker = null;
+
+    function mediaUrl(path) {
+        if (!path) return '';
+        if (path.startsWith('data:') || path.startsWith('http://') || path.startsWith('https://')) return path;
+        return '/' + String(path).replace(/^\//, '');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        addBatchRow();
+
+        document.getElementById('createOrderModal').addEventListener('hidden.bs.modal', function() {
+            resetBatchRows();
+            cart = [];
+            renderCart();
+            document.getElementById('customerName').value = '';
+            const slipInput = document.getElementById('paymentSlip');
+            if (slipInput) slipInput.value = '';
+            const slipPreview = document.getElementById('slipPreview');
+            if (slipPreview) slipPreview.style.display = 'none';
+        });
+
+        const slipInput = document.getElementById('paymentSlip');
+        if (slipInput) {
+            slipInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                const preview = document.getElementById('slipPreview');
+                const img = document.getElementById('slipPreviewImg');
+                if (file && file.type.startsWith('image/')) {
+                    img.src = URL.createObjectURL(file);
+                    preview.style.display = 'block';
+                } else if (preview) {
+                    preview.style.display = 'none';
+                }
+            });
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.product-picker')) {
+                closeAllDropdowns();
+            }
+        });
+    });
+
+    function closeAllDropdowns() {
+        document.querySelectorAll('.product-search-dropdown').forEach(el => el.classList.remove('show'));
+        activePicker = null;
+    }
+
+    function filterProducts(query) {
+        const q = query.trim().toLowerCase();
+        if (!q) return PRODUCTS.slice(0, 30);
+        return PRODUCTS.filter(p =>
+            p.name.toLowerCase().includes(q) || p.label.toLowerCase().includes(q)
+        ).slice(0, 50);
+    }
+
+    function renderProductDropdown(dropdown, items, onSelect) {
+        if (!items.length) {
+            dropdown.innerHTML = '<div class="p-3 text-muted small text-center">ไม่พบสินค้า</div>';
+            dropdown.classList.add('show');
+            return;
+        }
+        dropdown.innerHTML = items.map(p => {
+            const imgHtml = p.img
+                ? `<img src="${mediaUrl(p.img)}" class="product-option-img" onerror="this.outerHTML='<div class=\\'product-option-placeholder\\'></div>'">`
+                : '<div class="product-option-placeholder"></div>';
+            return `<button type="button" class="product-option" data-id="${p.id}">
+                ${imgHtml}
+                <span>${p.label}</span>
+            </button>`;
+        }).join('');
+        dropdown.querySelectorAll('.product-option').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const product = PRODUCTS.find(p => p.id === parseInt(this.dataset.id));
+                if (product) onSelect(product);
+            });
+        });
+        dropdown.classList.add('show');
+    }
+
+    function initProductPicker(row) {
+        const input = row.querySelector('.product-search-input');
+        const hidden = row.querySelector('.batch-product-id');
+        const dropdown = row.querySelector('.product-search-dropdown');
+
+        function selectProduct(product) {
+            hidden.value = product.id;
+            input.value = product.label;
+            dropdown.classList.remove('show');
+            activePicker = null;
+        }
+
+        function openDropdown() {
+            closeAllDropdowns();
+            activePicker = row;
+            renderProductDropdown(dropdown, filterProducts(input.value), selectProduct);
+        }
+
+        input.addEventListener('focus', openDropdown);
+        input.addEventListener('click', openDropdown);
+        input.addEventListener('input', function() {
+            hidden.value = '';
+            renderProductDropdown(dropdown, filterProducts(input.value), selectProduct);
+            dropdown.classList.add('show');
+            activePicker = row;
+        });
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                dropdown.classList.remove('show');
+            }
+        });
+    }
+
+    function addBatchRow() {
+        const container = document.getElementById('batchItemsContainer');
+        const template = document.getElementById('batchRowTemplate');
+        const row = template.content.firstElementChild.cloneNode(true);
+        const removeBtn = row.querySelector('.remove-row-btn');
+
+        container.appendChild(row);
+        initProductPicker(row);
+
+        removeBtn.addEventListener('click', function() {
+            removeBatchRow(row);
+        });
+
+        toggleRemoveButtons();
+    }
+
+    function removeBatchRow(row) {
+        const rows = document.querySelectorAll('#batchItemsContainer .batch-row');
+        if (rows.length <= 1) return;
+        row.remove();
+        toggleRemoveButtons();
+    }
+
+    function toggleRemoveButtons() {
+        const rows = document.querySelectorAll('#batchItemsContainer .batch-row');
+        rows.forEach(row => {
+            row.querySelector('.remove-row-btn').disabled = rows.length === 1;
+        });
+    }
+
+    function resetBatchRows() {
+        closeAllDropdowns();
+        document.getElementById('batchItemsContainer').innerHTML = '';
+        addBatchRow();
+    }
+
+    // ==========================================
+    // 1. ระบบจัดการตะกร้าสินค้าสำหรับสร้างออเดอร์ใหม่
+    // ==========================================
+    function addBatchToCart() {
+        const rows = document.querySelectorAll('#batchItemsContainer .batch-row');
+        const batchItems = [];
+
+        for (const row of rows) {
+            const productId = row.querySelector('.batch-product-id').value;
+            const qtyEl = row.querySelector('.batch-sell-qty');
+            const priceEl = row.querySelector('.batch-sell-price');
+
+            const qty = parseInt(qtyEl.value);
+            const price = parseFloat(priceEl.value);
+
+            if (!productId) continue;
+            if (isNaN(qty) || isNaN(price)) return alert("มีบางรายการระบุจำนวนหรือราคาไม่ครบ");
+
+            const product = PRODUCTS.find(p => p.id === parseInt(productId));
+            if (!product) continue;
+
+            if (qty > product.max) {
+                return alert("สต็อกไม่พอสำหรับสินค้า " + product.name + "! มีเหลือแค่ " + product.max + " ชิ้น");
+            }
+
+            batchItems.push({
+                product_id: product.id,
+                name: product.name,
+                sell_qty: qty,
+                sell_price: price,
+                img: product.img
+            });
+        }
+
+        if (!batchItems.length) return alert("กรุณาเลือกสินค้าอย่างน้อย 1 รายการ");
+
+        cart.push(...batchItems);
+        renderCart();
+        resetBatchRows();
+    }
+
+    function renderCart() {
+        const list = document.getElementById('cartList');
+        list.innerHTML = '';
+        cart.forEach((item, i) => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center bg-transparent border-0 px-0 mb-2';
+            const imgHtml = item.img ? `<img src="${mediaUrl(item.img)}" class="cart-item-img" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; margin-right: 8px;" onclick="showImageModal('${mediaUrl(item.img).replace(/'/g, "\\'")}', event)">` : `<div style="width: 40px; height: 40px; background-color: #ddd; border-radius: 6px; display: flex; align-items: center; justify-content: center; margin-right: 8px; font-size: 10px; color: #999;">No Pic</div>`;
+            li.innerHTML = `
+                <div style="display: flex; align-items: center; flex: 1;">
+                    ${imgHtml}
+                    <div>
+                        <div class="text-dark fw-500">${item.name}</div>
+                        <small class="text-muted">จำนวน: ${item.sell_qty} | ราคา: ฿${item.sell_price.toFixed(2)}</small>
+                    </div>
+                </div>
+                <button class="btn btn-sm text-danger" onclick="cart.splice(${i},1);renderCart()">
+                    <i class="bi bi-trash"></i>
+                </button>`;
+            list.appendChild(li);
+        });
+        document.getElementById('checkoutBtn').disabled = cart.length === 0;
+    }
+
+    function showImageModal(imageUrl, event) {
+        event.stopPropagation();
+        document.getElementById('modalImage').src = imageUrl;
+        new bootstrap.Modal(document.getElementById('imageModal')).show();
+    }
+
+    function setDefaultOrderDate() {
+        document.getElementById('orderDate').value = new Date().toISOString().slice(0, 10);
+    }
+
+    document.getElementById('createOrderModal').addEventListener('show.bs.modal', setDefaultOrderDate);
+
+    async function submitOrder() {
+        const customerName = document.getElementById('customerName').value.trim();
+        if (!customerName) return alert("กรุณาใส่ชื่อลูกค้า");
+        if (!cart.length) return alert("กรุณาเพิ่มสินค้าในตะกร้า");
+
+        const formData = new FormData();
+        formData.append('customer_name', customerName);
+        formData.append('items', JSON.stringify(cart));
+        const orderDate = document.getElementById('orderDate').value;
+        if (orderDate) formData.append('order_date', orderDate);
+        const slip = document.getElementById('paymentSlip').files[0];
+        if (slip) formData.append('payment_slip', slip);
+        
+        const res = await fetch('/order/create', {
+            method: 'POST',
+            body: formData
+        });
+        if (res.ok) window.location.reload();
+        else {
+            const err = await res.json().catch(() => ({}));
+            alert(err.detail || "เกิดข้อผิดพลาดในการบันทึกออเดอร์");
+        }
+    }
+
+    // ==========================================
+    // 2. ระบบดูรายละเอียดและแก้ไขออเดอร์เดิม
+    // ==========================================
+    function showDetails(id, name, date, revenue, cost, profit, dataId) {
+        currentEditingOrderId = id; 
+        
+        document.getElementById('viewOrderId').innerText = '#' + id;
+        document.getElementById('viewCustomerName').value = name || '';
+        document.getElementById('viewOrderDate').value = date || '';
+        document.getElementById('viewTotalRevenue').innerText = '฿' + parseFloat(revenue).toLocaleString(undefined, {minimumFractionDigits: 2});
+        document.getElementById('viewTotalCost').innerText = '฿' + parseFloat(cost).toLocaleString(undefined, {minimumFractionDigits: 2});
+        
+        const profitVal = parseFloat(profit);
+        const pEl = document.getElementById('viewProfit');
+        pEl.innerText = (profitVal >= 0 ? '+฿' : '฿') + profitVal.toLocaleString(undefined, {minimumFractionDigits: 2});
+        pEl.className = 'fw-bold mb-0 ' + (profitVal >= 0 ? 'text-success' : 'text-danger');
+
+        const slipEl = document.getElementById('slip-' + dataId);
+        const slipPath = slipEl ? JSON.parse(slipEl.textContent) : '';
+
+        const slipBox = document.getElementById('viewSlipBox');
+        const slipLink = document.getElementById('viewSlipLink');
+        const slipImg = document.getElementById('viewSlipImg');
+        const slipPdf = document.getElementById('viewSlipPdf');
+        const slipPdfLink = document.getElementById('viewSlipPdfLink');
+
+        if (slipPath) {
+            const url = mediaUrl(slipPath);
+            const isPdf = /\.pdf$/i.test(slipPath) || String(slipPath).startsWith('data:application/pdf');
+            slipBox.style.display = 'block';
+
+            if (isPdf) {
+                slipLink.style.display = 'none';
+                slipImg.src = '';
+                slipPdf.style.display = 'block';
+                slipPdfLink.href = url;
+            } else {
+                slipPdf.style.display = 'none';
+                slipLink.style.display = 'inline-block';
+                slipLink.href = url;
+                slipImg.src = url;
+            }
+        } else {
+            slipBox.style.display = 'none';
+            slipImg.src = '';
+        }
+
+        const items = JSON.parse(document.getElementById('data-' + dataId).textContent);
+        const listBody = document.getElementById('viewOrderItemsList');
+        listBody.innerHTML = '';
+
+        items.forEach(item => {
+            const imgHtml = item.img
+                ? `<img src="${mediaUrl(item.img)}" class="item-img">`
+                : `<div class="item-img bg-secondary text-white d-flex align-items-center justify-content-center small">No Pic</div>`;
+            
+            listBody.innerHTML += `
+                <div class="view-item-row item-row row g-2 align-items-end">
+                    <div class="col-md-6">
+                        <label class="form-label fw-600">สินค้า</label>
+                        <div class="d-flex align-items-center gap-2">
+                            ${imgHtml}
+                            <div class="fw-bold text-dark">${item.name}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-600">ราคาขาย/ชิ้น</label>
+                        <input type="number" class="form-control bg-light edit-price"
+                               data-item-id="${item.id}" value="${item.price}" step="0.01" style="border-radius: 10px;">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-600">จำนวน</label>
+                        <input type="number" class="form-control bg-light edit-qty"
+                               data-item-id="${item.id}" value="${item.qty}" min="1" style="border-radius: 10px;">
+                    </div>
+                </div>
+            `;
+        });
+
+        new bootstrap.Modal(document.getElementById('viewOrderModal')).show();
+    }
+
+    async function saveOrderUpdates() {
+        if (!currentEditingOrderId) return;
+
+        const rows = document.querySelectorAll('#viewOrderItemsList .item-row');
+        let updatedItems = [];
+
+        rows.forEach(row => {
+            const priceInput = row.querySelector('.edit-price');
+            const qtyInput = row.querySelector('.edit-qty');
+            
+            updatedItems.push({
+                item_id: parseInt(priceInput.dataset.itemId),
+                sell_price: parseFloat(priceInput.value),
+                sell_qty: parseInt(qtyInput.value)
+            });
+        });
+
+        if (!confirm('คุณต้องการบันทึกการแก้ไขออเดอร์นี้ใช่หรือไม่?')) return;
+
+        const btn = document.getElementById('saveUpdateBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> กำลังบันทึก...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`/order/update/${currentEditingOrderId}`, {
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: updatedItems })
+            });
+
+            if (res.ok) {
+                window.location.reload(); 
+            } else {
+                alert("เกิดข้อผิดพลาดในการอัปเดตออเดอร์");
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            alert("เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์");
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+
+    async function deleteCurrentOrder() {
+        if (!currentEditingOrderId) return;
+        if (!confirm('คุณต้องการลบออเดอร์นี้ใช่หรือไม่? ระบบจะคืนสต็อกสินค้าอัตโนมัติ')) return;
+
+        const btn = document.getElementById('deleteOrderBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> กำลังลบ...';
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`/order/delete/${currentEditingOrderId}`, {
+                method: 'POST'
+            });
+
+            if (res.ok) {
+                window.location.reload();
+            } else {
+                alert('เกิดข้อผิดพลาดในการลบออเดอร์');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+    }
+</script>
+{% endblock %}

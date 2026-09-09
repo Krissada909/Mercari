@@ -1,0 +1,27 @@
+# secrets
+.env
+.env.local
+**/.env
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# vercel / node
+.vercel/
+node_modules/
+
+# os / ide
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# local uploads (docker version)
+static/images/*
+!static/images/.gitkeep
+static/slips/*
+!static/slips/.gitkeep
+static/uploads/

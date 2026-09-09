@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4 align-items-center">
+    <div class="col-md-6">
+        <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-graph-up-arrow text-primary me-2"></i> สรุปกำไรและยอดขาย</h4>
+    </div>
+    
+    <div class="col-md-6 text-md-end mt-3 mt-md-0">
+        <form action="/profit-summary" method="get" class="d-flex justify-content-md-end align-items-center gap-2">
+            <label class="fw-semibold text-secondary mb-0">เลือกเดือน:</label>
+            <input type="month" name="month" class="form-control w-auto" value="{{ selected_month if selected_month else '' }}">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> ค้นหา</button>
+            {% if selected_month %}
+                <a href="/profit-summary" class="btn btn-outline-secondary">ดูทั้งหมด</a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 border-0" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+            <div class="card-body">
+                <h6 class="card-title text-light opacity-75 mb-1"><i class="bi bi-wallet2 me-1"></i> ยอดขายรวม (Revenue)</h6>
+                <h2 class="display-6 fw-bold mb-0">฿{{ "{:,.2f}".format(sum_revenue) }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 border-0" style="background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%); color: white;">
+            <div class="card-body">
+                <h6 class="card-title text-light opacity-75 mb-1"><i class="bi bi-cart-dash me-1"></i> ต้นทุนรวม (Cost)</h6>
+                <h2 class="display-6 fw-bold mb-0">฿{{ "{:,.2f}".format(sum_cost) }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 border-0" style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white;">
+            <div class="card-body">
+                <h6 class="card-title text-light opacity-75 mb-1"><i class="bi bi-cash-coin me-1"></i> กำไรสุทธิ (Profit)</h6>
+                <h2 class="display-6 fw-bold mb-0">฿{{ "{:,.2f}".format(sum_profit) }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header bg-white py-3">
+        <h6 class="mb-0 fw-bold">รายการออเดอร์ {% if selected_month %}ประจำเดือน {{ selected_month }}{% else %}ทั้งหมด{% endif %}</h6>
+    </div>
+    <div class="card-body p-0 table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-4">วันที่ขาย</th>
+                    <th>รหัส Order</th>
+                    <th>ชื่อลูกค้า</th>
+                    <th class="text-end">ยอดขาย</th>
+                    <th class="text-end">ต้นทุน</th>
+                    <th class="text-end pe-4">กำไร</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for o in orders %}
+                <tr>
+                    <td class="ps-4 text-muted small">{{ o.created_at.strftime('%Y-%m-%d') if o.created_at else '-' }}</td>
+                    <td><span class="badge bg-secondary">#{{ o.id }}</span></td>
+                    <td class="fw-semibold">{{ o.customer_name if o.customer_name else 'ไม่มีชื่อ' }}</td>
+                    <td class="text-end text-success">฿{{ "{:,.2f}".format(o.total_revenue) }}</td>
+                    <td class="text-end text-danger">฿{{ "{:,.2f}".format(o.total_cost) }}</td>
+                    <td class="text-end fw-bold text-primary pe-4">฿{{ "{:,.2f}".format(o.profit) }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">ไม่มีข้อมูลออเดอร์ในช่วงเวลานี้</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

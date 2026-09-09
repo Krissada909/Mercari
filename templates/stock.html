@@ -1,0 +1,356 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold" style="font-size: 1.8rem; color: #0f172a;">
+            <i class="bi bi-box-arrow-in-down"></i> รับเข้าสินค้า
+        </h2>
+        <p class="text-muted mb-0">เพิ่มสินค้าเข้าสู่ระบบ</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-primary shadow-sm" style="border-radius: 10px; padding: 0.6rem 1.2rem; font-weight: 500;" data-bs-toggle="modal" data-bs-target="#addProductModal">
+            <i class="bi bi-plus-circle me-1"></i> เพิ่มสินค้าใหม่
+        </button>
+        <button type="button" class="btn btn-warning shadow-sm" style="border-radius: 10px; padding: 0.6rem 1.2rem; font-weight: 500; display: none;" id="bulkShippingBtn" onclick="openBulkShippingModal()">
+            <i class="bi bi-truck me-1"></i> กำหนดค่าส่งทั้งหมด
+        </button>
+    </div>
+</div>
+
+<div class="modal fade" id="addProductModal" tabindex="-1" aria-labelledby="addProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg" style="border-radius: 15px; border: none;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border-top-left-radius: 15px; border-top-right-radius: 15px;">
+                <h5 class="modal-title fw-bold" id="addProductModalLabel"><i class="bi bi-plus-circle"></i> เพิ่มสินค้าใหม่</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form action="/product/add" method="post" enctype="multipart/form-data">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-600"><i class="bi bi-tag"></i> ชื่อสินค้า</label>
+                        <input type="text" class="form-control bg-light" name="name" placeholder="เช่น ฟิกเกอร์ One Piece..." required style="border-radius: 10px; border: 1px solid #e2e8f0;">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-600"><i class="bi bi-link-45deg"></i> Link</label>
+                        <input type="text" class="form-control bg-light" name="mercari_link" placeholder="https://... (ไม่บังคับ)" style="border-radius: 10px; border: 1px solid #e2e8f0;">
+                        <small class="text-muted">ไม่จำเป็นต้องใส่</small>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-600"><i class="bi bi-cash"></i> ราคา ({{ currency.symbol }})</label>
+                            <input type="number" step="0.01" class="form-control bg-light" name="price_jpy" placeholder="0.00" required style="border-radius: 10px; border: 1px solid #e2e8f0;">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-600"><i class="bi bi-boxes"></i> จำนวน (QTY)</label>
+                            <input type="number" class="form-control bg-light" name="qty" placeholder="0" required style="border-radius: 10px; border: 1px solid #e2e8f0;">
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label fw-600"><i class="bi bi-image"></i> รูปภาพ</label>
+                        <input type="file" class="form-control" name="image" accept="image/*" style="border-radius: 10px;">
+                        <small class="text-muted">ไฟล์รูปภาพ (JPG, PNG) - ไม่บังคับ</small>
+                    </div>
+                </div>
+                
+                <div class="modal-footer" style="border-bottom-left-radius: 15px; border-bottom-right-radius: 15px; background-color: #f8fafc;">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius: 10px;">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary px-4" style="border-radius: 10px;">
+                        <i class="bi bi-check-circle"></i> บันทึกรับเข้า
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editProductModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg" style="border-radius: 15px; border: none;">
+            <div class="modal-header bg-dark text-white" style="border-top-left-radius: 15px; border-top-right-radius: 15px;">
+                <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square"></i> แก้ไขข้อมูลสินค้า</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <form id="editProductForm" method="post" enctype="multipart/form-data">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-600"><i class="bi bi-tag"></i> ชื่อสินค้า</label>
+                        <input type="text" class="form-control bg-light" name="name" id="edit_name" required style="border-radius: 10px; border: 1px solid #e2e8f0;">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-600"><i class="bi bi-link-45deg"></i> Link</label>
+                        <input type="text" class="form-control bg-light" name="mercari_link" id="edit_mercari_link" placeholder="https://... (ไม่บังคับ)" style="border-radius: 10px; border: 1px solid #e2e8f0;">
+                        <small class="text-muted">ไม่จำเป็นต้องใส่</small>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-600"><i class="bi bi-cash"></i> ราคา ({{ currency.symbol }})</label>
+                            <input type="number" step="0.01" class="form-control bg-light" name="price_jpy" id="edit_price_jpy" required style="border-radius: 10px; border: 1px solid #e2e8f0;">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-600"><i class="bi bi-boxes"></i> จำนวน (QTY)</label>
+                            <input type="number" class="form-control bg-light" name="qty" id="edit_qty" required style="border-radius: 10px; border: 1px solid #e2e8f0;">
+                        </div>
+                        <div class="mb-1 mt-1">
+                            <label class="form-label fw-600"><i class="bi bi-image"></i> เปลี่ยนรูปภาพสินค้า</label>
+                            <input type="file" class="form-control" name="image" accept="image/*" style="border-radius: 10px;">
+                            <small class="text-muted">เลือกไฟล์ใหม่เพื่อเปลี่ยนรูปเดิม (ถ้าไม่เลือกจะใช้รูปเดิม)</small>
+                        </div>
+
+                    </div>
+                    
+                    <p class="text-muted small"><i class="bi bi-info-circle"></i> การแก้ไขราคาหรือจำนวน จะทำให้ต้นทุนต่อชิ้นถูกคำนวณใหม่โดยอัตโนมัติ</p>
+                </div>
+              
+
+                
+                <div class="modal-footer" style="border-bottom-left-radius: 15px; border-bottom-right-radius: 15px; background-color: #f8fafc;">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" style="border-radius: 10px;">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary px-4" style="border-radius: 10px;">
+                        <i class="bi bi-save"></i> บันทึกการแก้ไข
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="bulkShippingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg" style="border-radius: 15px; border: none;">
+            <div class="modal-header bg-warning text-dark" style="border-top-left-radius: 15px; border-top-right-radius: 15px;">
+                <h5 class="modal-title fw-bold"><i class="bi bi-truck"></i> กำหนดค่าส่งจำนวนมาก</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="bulkShippingItemsList" class="mb-3"></div>
+                <div class="mb-3 p-3 bg-light rounded">
+                    <label class="form-label fw-600"><i class="bi bi-currency-baht"></i> กำหนดค่าส่งให้ทั้งหมด (฿)</label>
+                    <input type="number" step="0.01" class="form-control" id="bulkShippingCost" placeholder="00.00" style="border-radius: 10px; font-size: 1.2rem;">
+                    <small class="text-muted">ระบุจำนวนค่าส่งเดียว ที่จะใช้สำหรับสินค้าทั้งหมดที่เลือก</small>
+                </div>
+            </div>
+            <div class="modal-footer bg-light" style="border-bottom-left-radius: 15px; border-bottom-right-radius: 15px;">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                <button type="button" class="btn btn-warning px-4" onclick="submitBulkShipping()">
+                    <i class="bi bi-check-circle"></i> ยืนยันทั้งหมด
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow-sm border-0" style="border-radius: 12px;">
+            <div class="card-header" style="background: linear-gradient(135deg, #0f172a 0%, #1a202c 100%); color: white; border-top-left-radius: 12px; border-top-right-radius: 12px;">
+                <i class="bi bi-clipboard-list"></i> รายการสต็อกปัจจุบัน (คลิกที่แถวเพื่อแก้ไขชื่อ/ราคา)
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    {% if products %}
+                        <table class="table table-hover align-middle mb-0">
+                            <thead style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 2px solid #e2e8f0;">
+                                <tr>
+                                    <th style="padding: 1rem; width: 40px;">
+                                        <input type="checkbox" class="form-check-input" id="selectAllProducts" onchange="toggleSelectAll(this)" style="cursor: pointer;">
+                                    </th>
+                                    <th style="padding: 1rem;">วันที่เพิ่ม</th>
+                                    <th style="padding: 1rem;">รูป</th>
+                                    <th style="padding: 1rem;">สินค้า</th>
+                                    <th class="text-center" style="padding: 1rem;">ต้นทุน ({{ currency.symbol }})</th>
+                                    <th class="text-center" style="padding: 1rem;">ค่าส่ง (฿)</th>
+                                    <th class="text-center" style="padding: 1rem;">ทุนต่อชิ้น (฿)</th>
+                                    <th class="text-center" style="padding: 1rem;">คงเหลือ</th>
+                                    <th class="text-center" style="padding: 1rem;">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for p in products %}
+                                <tr style="cursor: pointer;" onclick='openEditModal({{ p.id }}, {{ p.name|tojson }}, {{ (p.mercari_link or "")|tojson }}, {{ p.price_jpy }}, {{ p.qty }}, event)'>
+                                    <td style="padding: 1rem;" onclick="event.stopPropagation()">
+                                        {% if p.weight_cost_thb == 0 %}
+                                            <input type="checkbox" class="form-check-input product-checkbox" data-product-id="{{ p.id }}" data-product-name="{{ p.name }}" style="cursor: pointer;">
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-muted" style="padding: 1rem; font-size: 0.85rem; white-space: nowrap;">
+                                        {{ p.created_at.strftime('%Y-%m-%d') if p.created_at else '-' }}
+                                    </td>
+                                    <td style="padding: 1rem;">
+                                        {% if p.image_path %}
+                                            <img src="/{{ p.image_path }}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 10px; border: 1px solid #e2e8f0;">
+                                        {% else %}
+                                            <div class="bg-light text-muted d-flex align-items-center justify-content-center" style="width: 60px; height: 60px; border-radius: 10px; border: 1px dashed #cbd5e1; font-size: 0.7rem;">ไม่มีรูป</div>
+                                        {% endif %}
+                                    </td>
+                                    <td style="padding: 1rem;">
+                                        <strong style="color: #0f172a; font-size: 1rem;">{{ p.name }}</strong><br>
+                                        {% if p.mercari_link %}
+                                        <a href="{{ p.mercari_link }}" target="_blank" class="text-decoration-none" style="color: #3b82f6; font-size: 0.85rem;" onclick="event.stopPropagation()">
+                                            <i class="bi bi-link-45deg"></i> ดู Link
+                                        </a>
+                                        {% else %}
+                                        <span class="text-muted" style="font-size: 0.85rem;">ไม่มี Link</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center" style="padding: 1rem;">
+                                        <strong>{{ currency.symbol }}{{ p.price_jpy }}</strong>
+                                    </td>
+                                    <td class="text-center" style="padding: 1rem;">
+                                        {% if p.weight_cost_thb == 0 %}
+                                            <span class="badge bg-warning text-dark">รอถึง</span>
+                                        {% else %}
+                                            ฿{{ p.weight_cost_thb }}
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center" style="padding: 1rem;">
+                                        <strong style="color: #ef4444; font-size: 1.1rem;">฿{{ "%.2f"|format(p.unit_cost_thb) }}</strong>
+                                    </td>
+                                    <td class="text-center" style="padding: 1rem;">
+                                        <span class="badge {{ 'bg-success' if p.qty > 0 else 'bg-danger' }}" style="padding: 0.6rem 0.9rem; font-size: 0.9rem;">
+                                            {{ p.qty }} ชิ้น
+                                        </span>
+                                    </td>
+                                    <td class="text-center" style="padding: 1rem;" onclick="event.stopPropagation()">
+                                        <div class="d-flex gap-2 justify-content-center flex-wrap">
+                                            {% if p.weight_cost_thb == 0 %}
+                                                <span class="badge bg-warning text-dark" style="padding: 0.6rem 0.9rem;">รอถึง</span>
+                                            {% else %}
+                                                <span class="badge bg-success" style="padding: 0.6rem 0.9rem;">
+                                                    <i class="bi bi-check-circle"></i> ถึงแล้ว
+                                                </span>
+                                            {% endif %}
+                                            <form action="/product/{{ p.id }}/delete" method="post" style="display: inline;" onsubmit="return confirm('ยืนยันการลบสินค้า &quot;{{ p.name }}&quot;?');">
+                                                <button type="submit" class="btn btn-outline-danger btn-sm" style="border-radius: 8px; padding: 0.3rem 0.6rem;">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <div style="text-align: center; padding: 5rem 1rem; color: #94a3b8;">
+                            <i class="bi bi-inbox" style="font-size: 4rem; opacity: 0.3; display: block; margin-bottom: 1rem;"></i>
+                            <p style="font-size: 1.2rem; font-weight: 500;">ยังไม่มีรายการสินค้า</p>
+                            <p style="font-size: 0.95rem;">คลิกปุ่ม <strong>"เพิ่มสินค้าใหม่"</strong> เพื่อเริ่มต้น</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openEditModal(id, name, link, price, qty, event) {
+        // ป้องกันไม่ให้เด้งถ้ากดที่ Link หรือปุ่มจัดการ
+        if (event.target.tagName === 'A' || event.target.closest('button') || event.target.closest('form')) {
+            return;
+        }
+
+        // กำหนด URL ของฟอร์มแก้ไข
+        document.getElementById('editProductForm').action = `/product/${id}/update`;
+        
+        // ใส่ข้อมูลเดิมลงในช่องกรอก
+        document.getElementById('edit_name').value = name;
+        document.getElementById('edit_mercari_link').value = link || '';
+        document.getElementById('edit_price_jpy').value = price;
+        document.getElementById('edit_qty').value = qty;
+
+        const fileInput = document.querySelector('#editProductForm input[name="image"]');
+        if (fileInput) fileInput.value = "";
+        
+        // สั่งเปิด Modal
+        const editModal = new bootstrap.Modal(document.getElementById('editProductModal'));
+        editModal.show();
+    }
+
+    function toggleSelectAll(checkbox) {
+        const allCheckboxes = document.querySelectorAll('.product-checkbox');
+        allCheckboxes.forEach(cb => {
+            cb.checked = checkbox.checked;
+        });
+        updateCheckboxState();
+    }
+
+    function updateCheckboxState() {
+        const selectedCount = document.querySelectorAll('.product-checkbox:checked').length;
+        const bulkBtn = document.getElementById('bulkShippingBtn');
+        bulkBtn.style.display = selectedCount > 0 ? 'inline-block' : 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkboxes = document.querySelectorAll('.product-checkbox');
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', updateCheckboxState);
+        });
+    });
+
+    function openBulkShippingModal() {
+        const selected = document.querySelectorAll('.product-checkbox:checked');
+        if (selected.length === 0) {
+            alert('กรุณาเลือกสินค้าก่อน');
+            return;
+        }
+
+        const itemsList = document.getElementById('bulkShippingItemsList');
+        itemsList.innerHTML = '<h6 class="mb-3">สินค้าที่เลือก:</h6><ul class="list-group">';
+        
+        selected.forEach(cb => {
+            const productId = cb.dataset.productId;
+            const productName = cb.dataset.productName;
+            itemsList.innerHTML += `<li class="list-group-item">${productName}</li>`;
+        });
+        
+        itemsList.innerHTML += '</ul>';
+        document.getElementById('bulkShippingCost').value = '';
+        
+        new bootstrap.Modal(document.getElementById('bulkShippingModal')).show();
+    }
+
+    function submitBulkShipping() {
+        const shippingCost = document.getElementById('bulkShippingCost').value;
+        if (!shippingCost || shippingCost <= 0) {
+            alert('กรุณาระบุค่าส่ง');
+            return;
+        }
+
+        const selected = document.querySelectorAll('.product-checkbox:checked');
+        const productIds = Array.from(selected).map(cb => cb.dataset.productId);
+
+        if (productIds.length === 0) {
+            alert('กรุณาเลือกสินค้า');
+            return;
+        }
+
+        // สร้าง form เพื่อส่งข้อมูลทั้งหมด
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/product/bulk-arrive';
+
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'data';
+        input.value = JSON.stringify({
+            product_ids: productIds,
+            weight_cost_thb: parseFloat(shippingCost)
+        });
+
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+    }
+</script>
+{% endblock %}

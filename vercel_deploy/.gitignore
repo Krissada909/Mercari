@@ -1,0 +1,7 @@
+# อย่า commit ไฟล์ที่มีรหัสผ่าน
+.env
+.env.local
+.venv/
+__pycache__/
+*.pyc
+.vercel/

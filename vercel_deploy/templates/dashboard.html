@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <h2 class="fw-800" style="font-size: 2rem; color: #0f172a; margin-bottom: 0.5rem;">
+        <i class="bi bi-speedometer2"></i> ภาพรวมระบบ
+    </h2>
+    <p class="text-muted">สรุปผลการจัดการสินค้าและสถานะปัจจุบัน</p>
+</div>
+
+<div class="row">
+    <!-- Card 1: สินค้าคงเหลือ -->
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card h-100" style="border-left: 5px solid #3b82f6;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted mb-2"><i class="bi bi-box2"></i> สินค้าคงเหลือ</p>
+                        <h2 class="fw-bold" style="color: #3b82f6; font-size: 2.5rem;">{{ total_items_in_stock }}</h2>
+                        <p class="text-muted small">ชิ้น</p>
+                    </div>
+                    <div style="font-size: 2.5rem; color: #3b82f6; opacity: 0.1;">
+                        <i class="bi bi-box2-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 2: มูลค่าสต็อก -->
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card h-100" style="border-left: 5px solid #f59e0b;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted mb-2"><i class="bi bi-graph-up"></i> มูลค่าสต็อก</p>
+                        <h2 class="fw-bold" style="color: #f59e0b; font-size: 1.8rem;">฿{{ "{:,.0f}".format(total_inventory_cost) }}</h2>
+                        <p class="text-muted small">ทุนจม</p>
+                    </div>
+                    <div style="font-size: 2.5rem; color: #f59e0b; opacity: 0.1;">
+                        <i class="bi bi-piggy-bank-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3: ยอดขายรวม -->
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card h-100" style="border-left: 5px solid #10b981;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted mb-2"><i class="bi bi-cash-coin"></i> ยอดขายรวม</p>
+                        <h2 class="fw-bold" style="color: #10b981; font-size: 1.8rem;">฿{{ "{:,.0f}".format(total_revenue) }}</h2>
+                        <p class="text-muted small">รายรับ</p>
+                    </div>
+                    <div style="font-size: 2.5rem; color: #10b981; opacity: 0.1;">
+                        <i class="bi bi-cart-check-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 4: กำไรสุทธิ -->
+    <div class="col-lg-3 col-md-6 mb-4">
+        <div class="card h-100" style="border-left: 5px solid #8b5cf6;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted mb-2"><i class="bi bi-star"></i> กำไรสุทธิ</p>
+                        <h2 class="fw-bold" style="color: #8b5cf6; font-size: 1.8rem;">฿{{ "{:,.0f}".format(total_profit) }}</h2>
+                        <p class="text-muted small">ทั้งหมด</p>
+                    </div>
+                    <div style="font-size: 2.5rem; color: #8b5cf6; opacity: 0.1;">
+                        <i class="bi bi-trophy-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mt-2">
+    <!-- Bar Chart: ยอดขายรายเดือน -->
+    <div class="col-lg-8 mb-4">
+        <div class="card shadow-sm border-0 h-100" style="border-radius: 12px;">
+            <div class="card-header" style="background: linear-gradient(135deg, #0f172a 0%, #1a202c 100%); color: white; border-top-left-radius: 12px; border-top-right-radius: 12px;">
+                <i class="bi bi-bar-chart-line"></i> ยอดขาย กำไร และมูลค่าสต็อก 6 เดือนย้อนหลัง
+            </div>
+            <div class="card-body p-3">
+                <canvas id="monthlyChart" style="max-height: 280px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Donut Chart: สัดส่วนการเงิน -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow-sm border-0 h-100" style="border-radius: 12px;">
+            <div class="card-header" style="background: linear-gradient(135deg, #0f172a 0%, #1a202c 100%); color: white; border-top-left-radius: 12px; border-top-right-radius: 12px;">
+                <i class="bi bi-pie-chart"></i> ภาพรวมทุนและกำไร
+            </div>
+            <div class="card-body d-flex flex-column align-items-center justify-content-center p-3">
+                <canvas id="donutChart" style="max-height: 230px; max-width: 230px;"></canvas>
+                <div class="mt-3 w-100">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#f59e0b; margin-right:6px;"></span>มูลค่าสต็อกคงเหลือ</span>
+                        <strong class="small text-warning">฿{{ "{:,.0f}".format(total_inventory_cost) }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#ef4444; margin-right:6px;"></span>ต้นทุนขายสินค้า</span>
+                        <strong class="small text-danger">฿{{ "{:,.0f}".format(total_cost_sold) }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:#8b5cf6; margin-right:6px;"></span>กำไรสุทธิ</span>
+                        <strong class="small text-purple">฿{{ "{:,.0f}".format(total_profit) }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    const monthlyLabels = {{ monthly_labels | safe }};
+    const monthlyRevenue = {{ monthly_revenue | safe }};
+    const monthlyProfit = {{ monthly_profit | safe }};
+    const monthlyInventory = {{ monthly_inventory | safe }};
+
+    // Bar + Line Chart
+    new Chart(document.getElementById('monthlyChart'), {
+        type: 'bar',
+        data: {
+            labels: monthlyLabels,
+            datasets: [
+                {
+                    label: 'ยอดขาย (฿)',
+                    data: monthlyRevenue,
+                    backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                    borderColor: '#10b981',
+                    borderWidth: 2,
+                    borderRadius: 6,
+                    yAxisID: 'y',
+                },
+                {
+                    label: 'กำไร (฿)',
+                    data: monthlyProfit,
+                    backgroundColor: 'rgba(139, 92, 246, 0.7)',
+                    borderColor: '#8b5cf6',
+                    borderWidth: 2,
+                    borderRadius: 6,
+                    yAxisID: 'y',
+                },
+                {
+                    label: 'มูลค่าสต็อกสิ้นเดือน (฿)',
+                    data: monthlyInventory,
+                    type: 'line',
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                    borderWidth: 3,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#f59e0b',
+                    tension: 0.3,
+                    yAxisID: 'y',
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ` ${ctx.dataset.label}: ฿${ctx.raw.toLocaleString('th-TH', {minimumFractionDigits: 2})}`
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: val => '฿' + val.toLocaleString()
+                    }
+                }
+            }
+        }
+    });
+
+    // Donut Chart
+    const inventoryCost = {{ total_inventory_cost }};
+    const costSold = {{ total_cost_sold }};
+    const profit = {{ total_profit }};
+
+    new Chart(document.getElementById('donutChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['มูลค่าสต็อกคงเหลือ', 'ต้นทุนขายสินค้า', 'กำไรสุทธิ'],
+            datasets: [{
+                data: [
+                    inventoryCost > 0 ? inventoryCost : 0.001,
+                    costSold > 0 ? costSold : 0.001,
+                    profit > 0 ? profit : 0.001
+                ],
+                backgroundColor: ['#f59e0b', '#ef4444', '#8b5cf6'],
+                borderColor: ['#fff', '#fff', '#fff'],
+                borderWidth: 3,
+                hoverOffset: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            cutout: '65%',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => ` ฿${ctx.raw.toLocaleString('th-TH', {minimumFractionDigits: 2})}`
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

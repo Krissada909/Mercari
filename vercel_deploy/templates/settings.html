@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold" style="font-size: 1.8rem; color: #0f172a;">
+            <i class="bi bi-gear"></i> ตั้งค่าระบบ
+        </h2>
+        <p class="text-muted mb-0">จัดการสกุลเงินและอัตราแลกเปลี่ยนสำหรับการรับเข้าสินค้า</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0" style="border-radius: 12px;">
+            <div class="card-header" style="background: linear-gradient(135deg, #0f172a 0%, #1a202c 100%); color: white; border-top-left-radius: 12px; border-top-right-radius: 12px;">
+                <i class="bi bi-currency-exchange"></i> สกุลเงินรับเข้าสินค้า
+            </div>
+            <div class="card-body p-4">
+                <p class="text-muted mb-3">เลือกว่าจะใส่ราคาสินค้าเป็นสกุลไหน ระบบจะแปลงเป็นบาท (฿) เพื่อคำนวณต้นทุน</p>
+                
+                <form action="/settings/save" method="post" id="settingsForm">
+                    <div class="mb-4">
+                        <label class="form-label fw-600"><i class="bi bi-cash-stack"></i> สกุลเงินที่ใช้กรอกราคา</label>
+                        <select class="form-select bg-light" name="purchase_currency" id="purchaseCurrency" style="border-radius: 10px;">
+                            {% for code, opt in currency_options.items() %}
+                            <option value="{{ code }}" {% if purchase_currency == code %}selected{% endif %}>
+                                {{ opt.symbol }} {{ opt.label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-4" id="rateGroup">
+                        <label class="form-label fw-600" style="font-size: 1rem;"><i class="bi bi-percent"></i> อัตราแลกเปลี่ยนเป็นบาท</label>
+                        <div class="input-group" style="border-radius: 10px; overflow: hidden;">
+                            <span class="input-group-text bg-light" style="border: 1px solid #e2e8f0;" id="ratePrefix">{{ currency_symbol }} 1 =</span>
+                            <input type="number" step="0.0001" min="0" class="form-control bg-light" name="exchange_rate" id="exchangeRateInput" value="{{ current_rate }}" required style="border: 1px solid #e2e8f0; font-size: 1.2rem; padding: 0.8rem;">
+                            <span class="input-group-text bg-light" style="border: 1px solid #e2e8f0;">฿</span>
+                        </div>
+                        <small class="text-muted d-block mt-2" id="rateHint">
+                            ค่าปัจจุบัน: <strong>{{ currency_symbol }} 1 = ฿ {{ current_rate }}</strong>
+                        </small>
+                    </div>
+
+                    <div class="alert alert-info" style="border-radius: 10px;" id="exampleBox">
+                        <i class="bi bi-info-circle"></i> <strong>ตัวอย่าง:</strong>
+                        <span id="exampleText"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100" style="border-radius: 10px; padding: 0.8rem; font-weight: 500;">
+                        <i class="bi bi-save"></i> บันทึกการตั้งค่า
+                    </button>
+                </form>
+
+                <div id="successMessage" class="alert alert-success mt-3" style="display: none; border-radius: 10px;">
+                    <i class="bi bi-check-circle"></i> บันทึกการตั้งค่าสำเร็จ!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0" style="border-radius: 12px;">
+            <div class="card-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-top-left-radius: 12px; border-top-right-radius: 12px;">
+                <i class="bi bi-info-circle"></i> ข้อมูลเพิ่มเติม
+            </div>
+            <div class="card-body p-4">
+                <div class="mb-4">
+                    <h6 class="fw-bold mb-2">ใช้เมื่อไหร่</h6>
+                    <ul class="small text-muted" style="line-height: 2;">
+                        <li><strong>JPY</strong> — สั่งจาก Mercari / ของญี่ปุ่น</li>
+                        <li><strong>USD</strong> — สั่งจากเว็บต่างประเทศที่คิดเงินดอลลาร์</li>
+                        <li><strong>THB</strong> — ซื้อในไทย ไม่ต้องแปลงสกุลเงิน</li>
+                    </ul>
+                </div>
+
+                <div class="mb-4">
+                    <h6 class="fw-bold mb-2">⚠️ สำคัญ</h6>
+                    <ul class="small text-muted" style="line-height: 2;">
+                        <li>อัตราแลกเปลี่ยนใช้กับสินค้าใหม่ที่เพิ่มหลังบันทึกตั้งค่า</li>
+                        <li>สินค้าเดิมจะใช้ต้นทุนตามตอนที่เพิ่มเข้ามา</li>
+                        <li>รายงานกำไรและมูลค่าสต็อกคิดเป็นบาท (฿) เสมอ</li>
+                    </ul>
+                </div>
+
+                <div class="bg-light p-3 rounded" style="border-left: 4px solid #3b82f6;">
+                    <small class="text-muted">
+                        <strong>💡 ทิป:</strong> อัปเดตเรทจาก Google / XE.com ให้ตรงกับวันที่สั่งซื้อจริง
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const currencyMeta = {{ currency_options | tojson }};
+
+    function refreshCurrencyUI() {
+        const code = document.getElementById('purchaseCurrency').value;
+        const meta = currencyMeta[code];
+        const rateInput = document.getElementById('exchangeRateInput');
+        const rateGroup = document.getElementById('rateGroup');
+
+        document.getElementById('ratePrefix').textContent = meta.symbol + ' 1 =';
+
+        if (code === 'THB') {
+            rateInput.value = 1;
+            rateInput.readOnly = true;
+            rateGroup.style.opacity = '0.65';
+            document.getElementById('exampleText').textContent = 'ถ้าสินค้าราคา ฿500 ต้นทุนจะเป็น ฿500 (ไม่แปลงสกุลเงิน)';
+            document.getElementById('rateHint').innerHTML = 'ใช้บาทโดยตรง ไม่ต้องใส่อัตราแลกเปลี่ยน';
+        } else {
+            rateInput.readOnly = false;
+            rateGroup.style.opacity = '1';
+            if (!rateInput.value || parseFloat(rateInput.value) === 1 && code !== 'THB') {
+                rateInput.value = meta.default_rate;
+            }
+            const rate = parseFloat(rateInput.value) || meta.default_rate;
+            const sample = code === 'USD' ? 10 : 1000;
+            const cost = (sample * rate).toFixed(2);
+            document.getElementById('exampleText').textContent =
+                `ถ้าสินค้าราคา ${meta.symbol}${sample} กับเรท ${rate} ต้นทุนจะเป็น ฿${cost}`;
+            document.getElementById('rateHint').innerHTML =
+                `ค่าปัจจุบัน: <strong>${meta.symbol} 1 = ฿ ${rateInput.value}</strong>`;
+        }
+    }
+
+    document.getElementById('purchaseCurrency').addEventListener('change', refreshCurrencyUI);
+    document.getElementById('exchangeRateInput').addEventListener('input', refreshCurrencyUI);
+    refreshCurrencyUI();
+
+    document.getElementById('settingsForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const res = await fetch('/settings/save', {
+            method: 'POST',
+            body: formData
+        });
+        if (res.ok) {
+            document.getElementById('successMessage').style.display = 'block';
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+        }
+    });
+</script>
+{% endblock %}
