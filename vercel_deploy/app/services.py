@@ -5,24 +5,30 @@ import mimetypes
 from datetime import datetime, time
 from typing import Optional
 from . import models, schemas, config
+from .storage import upload_to_supabase_storage
 
 
 def get_exchange_rate():
     return config.get_exchange_rate()
 
 
-def _save_upload(file: Optional[UploadFile], folder: str = "") -> Optional[str]:
-    """
-    บน Vercel filesystem ไม่ถาวร — เก็บไฟล์เป็น data URI ใน DB แทน
-    """
+def _save_upload(file: Optional[UploadFile], folder: str = "products") -> Optional[str]:
+    """อัปโหลดไป Supabase Storage ก่อน ถ้าไม่ได้ค่อยใช้ data URI"""
     if not file or not file.filename:
         return None
+
+    try:
+        url = upload_to_supabase_storage(file, folder=folder)
+        if url:
+            return url
+    except ValueError:
+        raise
+    except Exception as e:
+        print(f"[storage] fallback to data URI: {e}")
 
     content = file.file.read()
     if not content:
         return None
-
-    # จำกัดขนาด ~1.5MB เพื่อไม่ให้ DB/payload ใหญ่เกิน
     if len(content) > 1_500_000:
         raise ValueError("ไฟล์ใหญ่เกิน 1.5MB กรุณาบีบอัดก่อนอัปโหลด")
 
@@ -32,7 +38,7 @@ def _save_upload(file: Optional[UploadFile], folder: str = "") -> Optional[str]:
 
 
 def create_product(db: Session, name: str, mercari_link: Optional[str], price_jpy: float, qty: int, image: UploadFile):
-    image_path = _save_upload(image)
+    image_path = _save_upload(image, folder="products")
 
     exchange_rate = get_exchange_rate()
     base_cost_thb = price_jpy * exchange_rate
@@ -77,7 +83,7 @@ def process_order(db: Session, order_data: schemas.OrderSchema, payment_slip: Op
     if order_data.order_date:
         order_kwargs["created_at"] = datetime.combine(order_data.order_date, time.min)
 
-    slip_path = _save_upload(payment_slip)
+    slip_path = _save_upload(payment_slip, folder="slips")
     if slip_path:
         order_kwargs["payment_slip_path"] = slip_path
 
