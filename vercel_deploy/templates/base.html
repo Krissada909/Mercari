@@ -275,6 +275,99 @@
             font-weight: 600;
             font-size: 0.875rem;
         }
+
+        @media (max-width: 767.98px) {
+            #wrapper {
+                position: relative;
+                width: 100%;
+                height: auto;
+                min-height: 100vh;
+                min-height: 100dvh;
+                overflow: visible;
+            }
+
+            #sidebar-wrapper {
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                width: min(260px, 85vw);
+                min-width: 0;
+                max-width: none;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease-in-out;
+                z-index: 1040;
+            }
+
+            #sidebar-wrapper.mobile-open {
+                transform: translateX(0);
+            }
+
+            #sidebar-wrapper.collapsed {
+                margin-left: 0;
+            }
+
+            #wrapper.mobile-menu-open::before {
+                content: '';
+                position: fixed;
+                inset: 0;
+                background: rgba(15, 23, 42, 0.45);
+                z-index: 1030;
+            }
+
+            #page-content-wrapper {
+                width: 100%;
+                min-width: 0;
+                overflow: visible;
+            }
+
+            .top-navbar {
+                padding: 0.75rem 1rem;
+            }
+
+            .main-container {
+                min-width: 0;
+                padding: 1rem;
+            }
+
+            .main-container .d-flex.justify-content-between {
+                flex-wrap: wrap;
+                gap: 0.75rem;
+            }
+
+            .main-container .table-responsive {
+                max-width: 100%;
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior-x: contain;
+            }
+
+            .card:hover {
+                transform: none;
+            }
+
+            .card-header {
+                padding: 1rem;
+                font-size: 1rem;
+            }
+
+            .card-body {
+                padding: 1rem;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .main-container {
+                padding: 0.75rem;
+            }
+
+            .top-navbar {
+                padding: 0.625rem 0.75rem;
+            }
+
+            .card-body {
+                padding: 0.75rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -354,7 +447,29 @@
         // ระบบปุ่มยุบ/ขยายเมนู (Sidebar)
         document.getElementById("menu-toggle").addEventListener("click", function(e) {
             e.preventDefault();
-            document.getElementById("sidebar-wrapper").classList.toggle("collapsed");
+            const sidebar = document.getElementById("sidebar-wrapper");
+            const wrapper = document.getElementById("wrapper");
+
+            if (window.matchMedia("(max-width: 767.98px)").matches) {
+                const isOpen = sidebar.classList.toggle("mobile-open");
+                wrapper.classList.toggle("mobile-menu-open", isOpen);
+            } else {
+                sidebar.classList.toggle("collapsed");
+            }
+        });
+
+        document.getElementById("wrapper").addEventListener("click", function(e) {
+            if (e.target === this && this.classList.contains("mobile-menu-open")) {
+                document.getElementById("sidebar-wrapper").classList.remove("mobile-open");
+                this.classList.remove("mobile-menu-open");
+            }
+        });
+
+        document.querySelectorAll(".sidebar-link").forEach(link => {
+            link.addEventListener("click", function() {
+                document.getElementById("sidebar-wrapper").classList.remove("mobile-open");
+                document.getElementById("wrapper").classList.remove("mobile-menu-open");
+            });
         });
 
         // ระบบไฮไลท์เมนูหน้าปัจจุบัน
