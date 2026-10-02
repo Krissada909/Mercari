@@ -70,6 +70,36 @@
         height: 48px;
         margin-right: 0;
     }
+    .mobile-order-list {
+        border-top: 1px solid #e2e8f0;
+    }
+    .mobile-order-item {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        gap: 0.75rem;
+        padding: 0.875rem 1rem;
+        border: 0;
+        border-bottom: 1px solid #e2e8f0;
+        background: #fff;
+        color: #334155;
+        text-align: left;
+        transition: background-color 0.15s ease;
+    }
+    .mobile-order-item:active { background: #f1f5f9; }
+    .mobile-order-copy { min-width: 0; flex: 1; }
+    .mobile-order-name { display: block; color: #0f172a; font-weight: 600; overflow-wrap: anywhere; }
+    .mobile-order-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.25rem 0.75rem; margin-top: 0.25rem; font-size: 0.82rem; }
+    @media (max-width: 767.98px) {
+        #viewOrderModal .modal-dialog { margin: 0.5rem; }
+        #viewOrderModal .modal-content { max-height: calc(100dvh - 1rem); }
+        #viewOrderModal .modal-body { min-height: 0; overflow-y: auto; padding: 1rem !important; }
+        #viewOrderModal .modal-footer { gap: 0.5rem; }
+        #viewOrderModal .modal-footer > button { flex: 1 1 auto; margin: 0 !important; }
+    }
+    @media (min-width: 768px) {
+        .mobile-order-list { display: none; }
+    }
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -247,7 +277,7 @@
                 <i class="bi bi-clock-history"></i> ประวัติการขาย (คลิกที่แถวเพื่อดูรายละเอียด)
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive">
+                <div class="table-responsive d-none d-md-block">
                     {% if orders %}
                         <table class="table table-hover align-middle mb-0">
                             <thead class="table-light">
@@ -295,6 +325,34 @@
                             <i class="bi bi-receipt fs-1 d-block mb-2 opacity-25"></i>
                             ยังไม่มีประวัติการขาย
                         </div>
+                    {% endif %}
+                </div>
+                <div class="mobile-order-list d-md-none">
+                    {% if orders %}
+                        {% for o in orders %}
+                        <button type="button" class="mobile-order-item"
+                            data-order-id="{{ o.id }}"
+                            data-customer="{{ o.customer_name or '' }}"
+                            data-date="{{ o.created_at.strftime('%Y-%m-%d') }}"
+                            data-revenue="{{ o.total_revenue }}"
+                            data-cost="{{ o.total_cost }}"
+                            data-profit="{{ o.profit }}"
+                            onclick="showDetails(this.dataset.orderId, this.dataset.customer, this.dataset.date, this.dataset.revenue, this.dataset.cost, this.dataset.profit, this.dataset.orderId)">
+                            <span class="mobile-order-copy">
+                                <span class="d-flex justify-content-between gap-2">
+                                    <span class="mobile-order-name">#{{ o.id }} · {{ o.customer_name if o.customer_name else 'ไม่มีชื่อ' }}</span>
+                                    <span class="text-muted small text-nowrap">{{ o.created_at.strftime('%Y-%m-%d') }}</span>
+                                </span>
+                                <span class="mobile-order-meta">
+                                    <span class="text-success">ยอดขาย ฿{{ '%.2f'|format(o.total_revenue) }}</span>
+                                    <span class="{{ 'text-success' if o.profit >= 0 else 'text-danger' }}">กำไร {{ '+฿' if o.profit >= 0 else '฿' }}{{ '%.2f'|format(o.profit) }}</span>
+                                </span>
+                            </span>
+                            <i class="bi bi-chevron-right text-muted" aria-hidden="true"></i>
+                        </button>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5 text-muted">ยังไม่มีประวัติการขาย</div>
                     {% endif %}
                 </div>
             </div>

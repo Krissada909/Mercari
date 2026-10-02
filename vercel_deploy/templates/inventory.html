@@ -1,6 +1,94 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+    .mobile-stock-list,
+    .mobile-order-list {
+        border-top: 1px solid #e2e8f0;
+    }
+    .mobile-stock-item,
+    .mobile-order-item {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        gap: 0.75rem;
+        padding: 0.875rem 1rem;
+        border: 0;
+        border-bottom: 1px solid #e2e8f0;
+        background: #fff;
+        color: #334155;
+        text-align: left;
+        transition: background-color 0.15s ease;
+    }
+    .mobile-stock-item:active,
+    .mobile-order-item:active {
+        background: #f1f5f9;
+    }
+    .mobile-stock-image {
+        width: 56px;
+        height: 56px;
+        flex: 0 0 56px;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+        object-fit: cover;
+        background: #f8fafc;
+    }
+    .mobile-stock-copy,
+    .mobile-order-copy {
+        min-width: 0;
+        flex: 1;
+    }
+    .mobile-stock-name,
+    .mobile-order-name {
+        display: block;
+        overflow-wrap: anywhere;
+        color: #0f172a;
+        font-weight: 600;
+    }
+    .mobile-stock-meta,
+    .mobile-order-meta {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-top: 0.25rem;
+        font-size: 0.82rem;
+    }
+    .mobile-stock-total {
+        color: #dc2626;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    .mobile-list-total {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 1rem;
+        background: #f8fafc;
+        font-weight: 700;
+    }
+    #inventoryProductModal .modal-dialog {
+        margin: 0.75rem;
+    }
+    #inventoryProductModal .modal-body {
+        max-height: calc(100dvh - 12rem);
+        overflow-y: auto;
+    }
+    @media (min-width: 768px) {
+        .mobile-stock-list,
+        .mobile-order-list {
+            display: none;
+        }
+    }
+    @media (max-width: 767.98px) {
+        #inventoryProductModal .modal-dialog {
+            margin: 0.5rem;
+        }
+        #inventoryProductModal .modal-body {
+            max-height: calc(100dvh - 8rem);
+        }
+    }
+</style>
+
 <div class="mb-4">
     <h2 class="fw-bold" style="font-size: 1.8rem; color: #0f172a;">
         <i class="bi bi-boxes"></i> สต็อกคงเหลือ
@@ -15,7 +103,7 @@
                 <i class="bi bi-clipboard-data"></i> รายการสต็อกคงเหลือทั้งหมด
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive">
+                <div class="table-responsive d-none d-md-block">
                     {% if products %}
                         <table class="table table-hover align-middle mb-0">
                             <thead style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 2px solid #e2e8f0;">
@@ -86,8 +174,97 @@
                         </div>
                     {% endif %}
                 </div>
+
+                <div class="mobile-stock-list d-md-none">
+                    {% if products %}
+                        {% for p in products %}
+                            {% set item_total = p.qty * p.unit_cost_thb %}
+                            <button type="button" class="mobile-stock-item" data-bs-toggle="modal" data-bs-target="#inventoryProductModal"
+                                data-product-name="{{ p.name }}"
+                                data-product-image="{{ p.image_path|media_url }}"
+                                data-product-link="{{ p.mercari_link or '' }}"
+                                data-product-date="{{ p.created_at.strftime('%Y-%m-%d') if p.created_at else '-' }}"
+                                data-product-cost="{{ '%.2f'|format(p.unit_cost_thb) }}"
+                                data-product-qty="{{ p.qty }}"
+                                data-product-total="{{ '%.2f'|format(item_total) }}">
+                                {% if p.image_path %}
+                                    <img class="mobile-stock-image" src="{{ p.image_path|media_url }}" alt="">
+                                {% else %}
+                                    <span class="mobile-stock-image d-flex align-items-center justify-content-center text-muted"><i class="bi bi-image"></i></span>
+                                {% endif %}
+                                <span class="mobile-stock-copy">
+                                    <span class="mobile-stock-name">{{ p.name }}</span>
+                                    <span class="mobile-stock-meta text-muted">
+                                        <span>เหลือ {{ p.qty }} ชิ้น</span>
+                                        <span>ทุน ฿{{ '%.2f'|format(p.unit_cost_thb) }}/ชิ้น</span>
+                                    </span>
+                                </span>
+                                <span class="mobile-stock-total">฿{{ '%.2f'|format(item_total) }}</span>
+                                <i class="bi bi-chevron-right text-muted" aria-hidden="true"></i>
+                            </button>
+                        {% endfor %}
+                        <div class="mobile-list-total">
+                            <span>รวมมูลค่าทุนจม</span>
+                            <span class="text-danger">฿{{ '{:,.2f}'.format(total_value.val) }}</span>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5 text-muted">ไม่มีสินค้าค้างสต็อก</div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="inventoryProductModal" tabindex="-1" aria-labelledby="inventoryProductModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="inventoryProductModalTitle">รายละเอียดสินค้า</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3" id="inventoryProductImageWrap" hidden>
+                    <img id="inventoryProductImage" src="" alt="" class="img-fluid rounded" style="max-height: 240px; object-fit: contain;">
+                </div>
+                <h6 id="inventoryProductName" class="fw-bold text-break">รายละเอียดสินค้า</h6>
+                <a id="inventoryProductLink" class="d-inline-block mb-3" href="#" target="_blank" rel="noopener noreferrer" hidden>
+                    <i class="bi bi-box-arrow-up-right"></i> เปิดลิงก์สินค้า
+                </a>
+                <dl class="row mb-0">
+                    <dt class="col-6 text-muted">วันที่นำเข้า</dt><dd class="col-6 text-end" id="inventoryProductDate"></dd>
+                    <dt class="col-6 text-muted">ทุนต่อชิ้น</dt><dd class="col-6 text-end" id="inventoryProductCost"></dd>
+                    <dt class="col-6 text-muted">จำนวนคงเหลือ</dt><dd class="col-6 text-end" id="inventoryProductQty"></dd>
+                    <dt class="col-6 fw-bold">มูลค่ารวม</dt><dd class="col-6 text-end fw-bold text-danger" id="inventoryProductTotal"></dd>
+                </dl>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">ปิด</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const inventoryProductModal = document.getElementById('inventoryProductModal');
+    inventoryProductModal.addEventListener('show.bs.modal', function(event) {
+        const trigger = event.relatedTarget;
+        const data = trigger.dataset;
+        const imageWrap = document.getElementById('inventoryProductImageWrap');
+        const image = document.getElementById('inventoryProductImage');
+        const link = document.getElementById('inventoryProductLink');
+
+        document.getElementById('inventoryProductName').textContent = data.productName;
+        document.getElementById('inventoryProductDate').textContent = data.productDate;
+        document.getElementById('inventoryProductCost').textContent = `฿${data.productCost}`;
+        document.getElementById('inventoryProductQty').textContent = `${data.productQty} ชิ้น`;
+        document.getElementById('inventoryProductTotal').textContent = `฿${data.productTotal}`;
+        imageWrap.hidden = !data.productImage;
+        image.src = data.productImage || '';
+        link.hidden = !data.productLink;
+        link.href = data.productLink || '#';
+    });
+</script>
 {% endblock %}

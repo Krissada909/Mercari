@@ -1,6 +1,51 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+    .mobile-stock-list {
+        border-top: 1px solid #e2e8f0;
+    }
+    .mobile-stock-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .mobile-stock-row .form-check-input {
+        flex: 0 0 auto;
+        margin: 0;
+    }
+    .mobile-stock-detail {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        flex: 1;
+        gap: 0.75rem;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #334155;
+        text-align: left;
+    }
+    .mobile-stock-detail:active { opacity: 0.7; }
+    .mobile-stock-image {
+        width: 52px;
+        height: 52px;
+        flex: 0 0 52px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        object-fit: cover;
+        background: #f8fafc;
+    }
+    .mobile-stock-copy { min-width: 0; flex: 1; }
+    .mobile-stock-name { display: block; color: #0f172a; font-weight: 600; overflow-wrap: anywhere; }
+    .mobile-stock-meta { display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; margin-top: 0.2rem; font-size: 0.8rem; }
+    @media (min-width: 768px) {
+        .mobile-stock-list { display: none; }
+    }
+</style>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2 class="fw-bold" style="font-size: 1.8rem; color: #0f172a;">
@@ -154,7 +199,7 @@
                 <i class="bi bi-clipboard-list"></i> รายการสต็อกปัจจุบัน (คลิกที่แถวเพื่อแก้ไขชื่อ/ราคา)
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive">
+                <div class="table-responsive d-none d-md-block">
                     {% if products %}
                         <table class="table table-hover align-middle mb-0">
                             <thead style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-bottom: 2px solid #e2e8f0;">
@@ -246,6 +291,38 @@
                         </div>
                     {% endif %}
                 </div>
+                <div class="mobile-stock-list d-md-none">
+                    {% if products %}
+                        {% for p in products %}
+                        <div class="mobile-stock-row">
+                            {% if p.weight_cost_thb == 0 %}
+                            <input type="checkbox" class="form-check-input product-checkbox" data-product-id="{{ p.id }}" data-product-name="{{ p.name }}" aria-label="เลือก {{ p.name }} เพื่อกำหนดค่าส่ง">
+                            {% endif %}
+                            <button type="button" class="mobile-stock-detail" onclick='openEditModal({{ p.id }}, {{ p.name|tojson }}, {{ (p.mercari_link or "")|tojson }}, {{ p.price_jpy }}, {{ p.qty }}, event, true)'>
+                                {% if p.image_path %}
+                                <img class="mobile-stock-image" src="{{ p.image_path|media_url }}" alt="">
+                                {% else %}
+                                <span class="mobile-stock-image d-flex align-items-center justify-content-center text-muted"><i class="bi bi-image"></i></span>
+                                {% endif %}
+                                <span class="mobile-stock-copy">
+                                    <span class="mobile-stock-name">{{ p.name }}</span>
+                                    <span class="mobile-stock-meta text-muted">
+                                        <span>{{ currency.symbol }}{{ p.price_jpy }}</span>
+                                        <span>{{ p.qty }} ชิ้น</span>
+                                        <span>ทุน ฿{{ '%.2f'|format(p.unit_cost_thb) }}</span>
+                                    </span>
+                                    <span class="badge {{ 'bg-warning text-dark' if p.weight_cost_thb == 0 else 'bg-success' }} mt-1">
+                                        {{ 'รอถึง' if p.weight_cost_thb == 0 else 'ถึงแล้ว' }}
+                                    </span>
+                                </span>
+                                <i class="bi bi-chevron-right text-muted" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5 text-muted">ยังไม่มีรายการสินค้า</div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
@@ -254,9 +331,9 @@
 
 {% block scripts %}
 <script>
-    function openEditModal(id, name, link, price, qty, event) {
+    function openEditModal(id, name, link, price, qty, event, allowButton = false) {
         // ป้องกันไม่ให้เด้งถ้ากดที่ Link หรือปุ่มจัดการ
-        if (event.target.tagName === 'A' || event.target.closest('button') || event.target.closest('form')) {
+        if (event.target.tagName === 'A' || (!allowButton && (event.target.closest('button') || event.target.closest('form')))) {
             return;
         }
 
@@ -285,8 +362,16 @@
         updateCheckboxState();
     }
 
+    function getSelectedProducts() {
+        const selected = new Map();
+        document.querySelectorAll('.product-checkbox:checked').forEach(cb => {
+            selected.set(cb.dataset.productId, cb);
+        });
+        return Array.from(selected.values());
+    }
+
     function updateCheckboxState() {
-        const selectedCount = document.querySelectorAll('.product-checkbox:checked').length;
+        const selectedCount = getSelectedProducts().length;
         const bulkBtn = document.getElementById('bulkShippingBtn');
         bulkBtn.style.display = selectedCount > 0 ? 'inline-block' : 'none';
     }
@@ -299,7 +384,7 @@
     });
 
     function openBulkShippingModal() {
-        const selected = document.querySelectorAll('.product-checkbox:checked');
+        const selected = getSelectedProducts();
         if (selected.length === 0) {
             alert('กรุณาเลือกสินค้าก่อน');
             return;
@@ -327,7 +412,7 @@
             return;
         }
 
-        const selected = document.querySelectorAll('.product-checkbox:checked');
+        const selected = getSelectedProducts();
         const productIds = Array.from(selected).map(cb => cb.dataset.productId);
 
         if (productIds.length === 0) {
