@@ -17,7 +17,7 @@
     }
 </style>
 
-<div class="modal fade" id="viewOrderModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="viewOrderModal" tabindex="-1" data-readonly="{{ 'true' if order_details_readonly|default(false) else 'false' }}" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content shadow-lg" style="border-radius: 15px;">
             <div class="modal-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-top-left-radius: 15px; border-top-right-radius: 15px;">
@@ -70,13 +70,17 @@
                 </div>
             </div>
             <div class="modal-footer bg-light" style="border-bottom-left-radius: 15px; border-bottom-right-radius: 15px;">
+                {% if not (order_details_readonly|default(false)) %}
                 <button type="button" class="btn btn-danger me-auto" id="deleteOrderBtn" onclick="deleteCurrentOrder()">
                     <i class="bi bi-trash"></i> ลบออเดอร์
                 </button>
+                {% endif %}
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">ปิด</button>
+                {% if not (order_details_readonly|default(false)) %}
                 <button type="button" class="btn btn-success px-4" id="saveUpdateBtn" onclick="saveOrderUpdates()">
                     <i class="bi bi-save"></i> บันทึกการแก้ไข
                 </button>
+                {% endif %}
             </div>
         </div>
     </div>
