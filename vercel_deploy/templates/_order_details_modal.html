@@ -94,3 +94,216 @@
         </div>
     </div>
 </div>
+
+<script>
+    let currentEditingOrderId = null;
+
+    function mediaUrl(path) {
+        if (!path) return '';
+        if (path.startsWith('data:') || path.startsWith('http://') || path.startsWith('https://')) return path;
+        return '/' + String(path).replace(/^\//, '');
+    }
+
+    function showDetails(id, name, date, revenue, cost, profit, dataId) {
+        currentEditingOrderId = id;
+        document.getElementById('viewOrderId').innerText = '#' + id;
+        document.getElementById('viewCustomerName').value = name || '';
+        document.getElementById('viewOrderDate').value = date || '';
+        document.getElementById('viewTotalRevenue').innerText = '฿' + parseFloat(revenue).toLocaleString(undefined, { minimumFractionDigits: 2 });
+        document.getElementById('viewTotalCost').innerText = '฿' + parseFloat(cost).toLocaleString(undefined, { minimumFractionDigits: 2 });
+
+        const profitValue = parseFloat(profit);
+        const profitElement = document.getElementById('viewProfit');
+        profitElement.innerText = (profitValue >= 0 ? '+฿' : '฿') + profitValue.toLocaleString(undefined, { minimumFractionDigits: 2 });
+        profitElement.className = 'fw-bold mb-0 ' + (profitValue >= 0 ? 'text-success' : 'text-danger');
+
+        const slipElement = document.getElementById('slip-' + dataId);
+        let slipPath = '';
+        try {
+            slipPath = slipElement ? JSON.parse(slipElement.textContent) : '';
+        } catch (error) {
+            console.error('Could not read order slip data:', error);
+        }
+        const slipBox = document.getElementById('viewSlipBox');
+        const slipLink = document.getElementById('viewSlipLink');
+        const slipImage = document.getElementById('viewSlipImg');
+        const slipPdf = document.getElementById('viewSlipPdf');
+        const slipPdfLink = document.getElementById('viewSlipPdfLink');
+
+        if (slipPath) {
+            const url = mediaUrl(slipPath);
+            const isPdf = /\.pdf$/i.test(slipPath) || String(slipPath).startsWith('data:application/pdf');
+            slipBox.style.display = 'block';
+            if (isPdf) {
+                slipLink.style.display = 'none';
+                slipImage.src = '';
+                slipPdf.style.display = 'block';
+                slipPdfLink.href = url;
+            } else {
+                slipPdf.style.display = 'none';
+                slipLink.style.display = 'inline-block';
+                slipLink.href = url;
+                slipImage.src = url;
+            }
+        } else {
+            slipBox.style.display = 'none';
+            slipImage.src = '';
+        }
+
+        const itemsElement = document.getElementById('data-' + dataId);
+        let items = [];
+        try {
+            items = itemsElement ? JSON.parse(itemsElement.textContent) : [];
+        } catch (error) {
+            console.error('Could not read order item data:', error);
+        }
+        const listBody = document.getElementById('viewOrderItemsList');
+        listBody.replaceChildren();
+        const readOnly = document.getElementById('viewOrderModal').dataset.readonly === 'true';
+
+        items.forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'view-item-row item-row row g-2 align-items-center';
+            const productColumn = document.createElement('div');
+            productColumn.className = 'col-md-6';
+            const productLabel = document.createElement('label');
+            productLabel.className = 'form-label fw-600';
+            productLabel.textContent = 'สินค้า';
+            const productDetails = document.createElement('div');
+            productDetails.className = 'd-flex align-items-center gap-2';
+
+            let image;
+            if (item.img) {
+                image = document.createElement('img');
+                image.src = mediaUrl(item.img);
+                image.alt = item.name || 'รูปสินค้า';
+                image.className = 'item-img product-detail-image';
+                image.addEventListener('error', function() {
+                    this.replaceWith(createProductImagePlaceholder());
+                }, { once: true });
+            } else {
+                image = createProductImagePlaceholder();
+            }
+
+            const productName = document.createElement('div');
+            productName.className = 'fw-bold text-dark text-break';
+            productName.textContent = item.name || 'สินค้า';
+            productDetails.append(image, productName);
+            productColumn.append(productLabel, productDetails);
+
+            const priceColumn = document.createElement('div');
+            priceColumn.className = 'col-md-3';
+            const priceLabel = document.createElement('label');
+            priceLabel.className = 'form-label fw-600';
+            priceLabel.textContent = 'ราคาขาย/ชิ้น';
+            const priceInput = document.createElement('input');
+            priceInput.type = 'number';
+            priceInput.className = 'form-control bg-light edit-price';
+            priceInput.dataset.itemId = item.id;
+            priceInput.value = item.price;
+            priceInput.step = '0.01';
+            priceInput.readOnly = readOnly;
+            priceInput.style.borderRadius = '10px';
+            priceColumn.append(priceLabel, priceInput);
+
+            const quantityColumn = document.createElement('div');
+            quantityColumn.className = 'col-md-3';
+            const quantityLabel = document.createElement('label');
+            quantityLabel.className = 'form-label fw-600';
+            quantityLabel.textContent = 'จำนวน';
+            const quantityInput = document.createElement('input');
+            quantityInput.type = 'number';
+            quantityInput.className = 'form-control bg-light edit-qty';
+            quantityInput.dataset.itemId = item.id;
+            quantityInput.value = item.qty;
+            quantityInput.min = '1';
+            quantityInput.readOnly = readOnly;
+            quantityInput.style.borderRadius = '10px';
+            quantityColumn.append(quantityLabel, quantityInput);
+
+            row.append(productColumn, priceColumn, quantityColumn);
+            listBody.appendChild(row);
+        });
+
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('viewOrderModal')).show();
+    }
+
+    function showDetailsFromTrigger(trigger) {
+        const order = trigger.dataset;
+        if (!order.orderId) return;
+        showDetails(order.orderId, order.customer, order.orderDate, order.revenue, order.cost, order.profit, order.orderId);
+    }
+
+    document.addEventListener('click', function(event) {
+        const row = event.target.closest('.order-row');
+        if (row) showDetailsFromTrigger(row);
+    });
+
+    async function saveOrderUpdates() {
+        if (!currentEditingOrderId) return;
+        const rows = document.querySelectorAll('#viewOrderItemsList .item-row');
+        const updatedItems = Array.from(rows, row => {
+            const priceInput = row.querySelector('.edit-price');
+            const qtyInput = row.querySelector('.edit-qty');
+            return {
+                item_id: parseInt(priceInput.dataset.itemId),
+                sell_price: parseFloat(priceInput.value),
+                sell_qty: parseInt(qtyInput.value)
+            };
+        });
+        if (!confirm('คุณต้องการบันทึกการแก้ไขออเดอร์นี้ใช่หรือไม่?')) return;
+
+        const button = document.getElementById('saveUpdateBtn');
+        const originalText = button.innerHTML;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> กำลังบันทึก...';
+        button.disabled = true;
+        try {
+            const response = await fetch(`/order/update/${currentEditingOrderId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items: updatedItems })
+            });
+            if (response.ok) window.location.reload();
+            else {
+                alert('เกิดข้อผิดพลาดในการอัปเดตออเดอร์');
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+            button.innerHTML = originalText;
+            button.disabled = false;
+        }
+    }
+
+    async function deleteCurrentOrder() {
+        if (!currentEditingOrderId) return;
+        if (!confirm('คุณต้องการลบออเดอร์นี้ใช่หรือไม่? ระบบจะคืนสต็อกสินค้าอัตโนมัติ')) return;
+        const button = document.getElementById('deleteOrderBtn');
+        const originalText = button.innerHTML;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm"></span> กำลังลบ...';
+        button.disabled = true;
+        try {
+            const response = await fetch(`/order/delete/${currentEditingOrderId}`, { method: 'POST' });
+            if (response.ok) window.location.reload();
+            else {
+                alert('เกิดข้อผิดพลาดในการลบออเดอร์');
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+            button.innerHTML = originalText;
+            button.disabled = false;
+        }
+    }
+
+    function createProductImagePlaceholder() {
+        const placeholder = document.createElement('div');
+        placeholder.className = 'item-img product-detail-placeholder bg-light d-flex align-items-center justify-content-center';
+        placeholder.innerHTML = '<i class="bi bi-image" aria-hidden="true"></i>';
+        return placeholder;
+    }
+</script>
