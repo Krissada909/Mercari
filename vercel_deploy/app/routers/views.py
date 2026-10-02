@@ -83,7 +83,7 @@ async def stock_page(request: Request, db: Session = Depends(get_db)):
     })
 
 @router.get("/orders", response_class=HTMLResponse)
-async def orders_page(request: Request, open_order: Optional[int] = None, db: Session = Depends(get_db)):
+async def orders_page(request: Request, db: Session = Depends(get_db)):
     # ดึงเฉพาะของที่ยังมีสต็อกมาแสดงใน Dropdown
     available_products = db.query(models.Product).filter(models.Product.qty > 0).all()
     orders = db.query(models.Order).order_by(models.Order.id.desc()).all()
@@ -91,7 +91,6 @@ async def orders_page(request: Request, open_order: Optional[int] = None, db: Se
         "request": request,
         "products": available_products,
         "orders": orders,
-        "open_order_id": open_order,
     })
 
 @router.get("/inventory", response_class=HTMLResponse)

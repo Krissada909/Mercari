@@ -4,8 +4,9 @@
 <style>
     .profit-summary-filter { flex-wrap: wrap; }
     .profit-summary-customer {
-        display: inline-block;
         padding: 0;
+        border: 0;
+        background: transparent;
         color: #0f172a;
         font: inherit;
         font-weight: 600;
@@ -13,6 +14,7 @@
         text-decoration: underline;
         text-decoration-color: #cbd5e1;
         text-underline-offset: 3px;
+        cursor: pointer;
     }
     .profit-summary-customer:hover,
     .profit-summary-customer:focus-visible { color: #2563eb; }
@@ -27,6 +29,7 @@
         background: #fff;
         color: #334155;
         text-align: left;
+        cursor: pointer;
     }
     .profit-mobile-order:active { background: #f1f5f9; }
     .profit-mobile-heading,
@@ -109,14 +112,34 @@
                     <td class="ps-4 text-muted small">{{ o.created_at.strftime('%Y-%m-%d') if o.created_at else '-' }}</td>
                     <td><span class="badge bg-secondary">#{{ o.id }}</span></td>
                     <td>
-                        <a class="profit-summary-customer" href="/orders?open_order={{ o.id }}">
+                        <button type="button" class="profit-summary-customer order-detail-trigger"
+                            data-order-id="{{ o.id }}"
+                            data-customer="{{ o.customer_name or '' }}"
+                            data-order-date="{{ o.created_at.strftime('%Y-%m-%d') if o.created_at else '-' }}"
+                            data-revenue="{{ o.total_revenue }}"
+                            data-cost="{{ o.total_cost }}"
+                            data-profit="{{ o.profit }}">
                             {{ o.customer_name if o.customer_name else 'ไม่มีชื่อ' }}
-                        </a>
+                        </button>
                     </td>
                     <td class="text-end text-success">฿{{ "{:,.2f}".format(o.total_revenue) }}</td>
                     <td class="text-end text-danger">฿{{ "{:,.2f}".format(o.total_cost) }}</td>
                     <td class="text-end fw-bold text-primary pe-4">฿{{ "{:,.2f}".format(o.profit) }}</td>
                 </tr>
+                <script id="data-{{ o.id }}" type="application/json">
+                    [
+                        {% for item in o.items %}
+                        {
+                            "id": {{ item.id }},
+                            "name": {{ item.product.name|tojson }},
+                            "qty": {{ item.sell_qty }},
+                            "price": {{ item.sell_price_per_unit }},
+                            "img": {{ (item.product.image_path or '')|tojson }}
+                        }{% if not loop.last %},{% endif %}
+                        {% endfor %}
+                    ]
+                </script>
+                <script id="slip-{{ o.id }}" type="application/json">{{ (o.payment_slip_path or '')|tojson }}</script>
                 {% else %}
                 <tr>
                     <td colspan="6" class="text-center py-5 text-muted">ไม่มีข้อมูลออเดอร์ในช่วงเวลานี้</td>
@@ -127,7 +150,13 @@
         </div>
         <div class="profit-mobile-list d-md-none">
             {% for o in orders %}
-            <a class="profit-mobile-order text-decoration-none" href="/orders?open_order={{ o.id }}">
+            <button type="button" class="profit-mobile-order order-detail-trigger"
+                data-order-id="{{ o.id }}"
+                data-customer="{{ o.customer_name or '' }}"
+                data-order-date="{{ o.created_at.strftime('%Y-%m-%d') if o.created_at else '-' }}"
+                data-revenue="{{ o.total_revenue }}"
+                data-cost="{{ o.total_cost }}"
+                data-profit="{{ o.profit }}">
                 <span class="profit-mobile-heading">
                     <span class="profit-mobile-customer">{{ o.customer_name if o.customer_name else 'ไม่มีชื่อ' }}</span>
                     <span class="badge bg-secondary flex-shrink-0">#{{ o.id }}</span>
@@ -137,7 +166,7 @@
                     <span class="text-success">ขาย ฿{{ '{:,.2f}'.format(o.total_revenue) }}</span>
                     <span class="{{ 'text-success' if o.profit >= 0 else 'text-danger' }}">กำไร {{ '+฿' if o.profit >= 0 else '฿' }}{{ '{:,.2f}'.format(o.profit) }}</span>
                 </span>
-            </a>
+            </button>
             {% else %}
             <div class="text-center py-5 text-muted">ไม่มีข้อมูลออเดอร์ในช่วงเวลานี้</div>
             {% endfor %}
@@ -145,4 +174,9 @@
     </div>
 </div>
 
+{% include "_order_details_modal.html" %}
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/order_details.js"></script>
 {% endblock %}
