@@ -260,14 +260,13 @@
                 <div class="mobile-order-list d-md-none">
                     {% if orders %}
                         {% for o in orders %}
-                        <button type="button" class="mobile-order-item"
+                        <button type="button" class="mobile-order-item order-detail-trigger"
                             data-order-id="{{ o.id }}"
                             data-customer="{{ o.customer_name or '' }}"
-                            data-date="{{ o.created_at.strftime('%Y-%m-%d') }}"
                             data-revenue="{{ o.total_revenue }}"
                             data-cost="{{ o.total_cost }}"
                             data-profit="{{ o.profit }}"
-                            onclick="showDetails(this.dataset.orderId, this.dataset.customer, this.dataset.date, this.dataset.revenue, this.dataset.cost, this.dataset.profit, this.dataset.orderId)">
+                            data-order-date="{{ o.created_at.strftime('%Y-%m-%d') }}">
                             <span class="mobile-order-copy">
                                 <span class="d-flex justify-content-between gap-2">
                                     <span class="mobile-order-name">#{{ o.id }} · {{ o.customer_name if o.customer_name else 'ไม่มีชื่อ' }}</span>
