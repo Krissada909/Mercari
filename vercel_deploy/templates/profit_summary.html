@@ -4,9 +4,8 @@
 <style>
     .profit-summary-filter { flex-wrap: wrap; }
     .profit-summary-customer {
+        display: inline-block;
         padding: 0;
-        border: 0;
-        background: transparent;
         color: #0f172a;
         font: inherit;
         font-weight: 600;
@@ -17,6 +16,7 @@
     }
     .profit-summary-customer:hover,
     .profit-summary-customer:focus-visible { color: #2563eb; }
+    .profit-summary-customer:hover { text-decoration-color: currentColor; }
     .profit-mobile-list { border-top: 1px solid #e2e8f0; }
     .profit-mobile-order {
         display: block;
@@ -33,26 +33,12 @@
     .profit-mobile-meta { display: flex; justify-content: space-between; gap: 0.5rem; }
     .profit-mobile-customer { min-width: 0; overflow-wrap: anywhere; font-weight: 600; color: #0f172a; }
     .profit-mobile-meta { flex-wrap: wrap; margin-top: 0.35rem; font-size: 0.82rem; }
-    #profitOrderModal .modal-dialog { margin: 0.75rem; }
-    #profitOrderModal .modal-content { max-height: calc(100dvh - 1.5rem); }
-    #profitOrderModal .modal-body { min-height: 0; overflow-y: auto; }
-    .profit-detail-item {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 0.2rem 0.75rem;
-        padding: 0.75rem 0;
-        border-bottom: 1px solid #e2e8f0;
-    }
-    .profit-detail-name { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
     @media (min-width: 768px) {
         .profit-mobile-list { display: none; }
     }
     @media (max-width: 767.98px) {
         .profit-summary-filter { justify-content: flex-start !important; }
         .profit-summary-filter .form-control { flex: 1 1 145px; }
-        #profitOrderModal .modal-dialog { margin: 0.5rem; }
-        #profitOrderModal .modal-content { max-height: calc(100dvh - 1rem); }
-        #profitOrderModal .modal-footer { padding: 0.75rem; }
     }
 </style>
 
@@ -123,33 +109,14 @@
                     <td class="ps-4 text-muted small">{{ o.created_at.strftime('%Y-%m-%d') if o.created_at else '-' }}</td>
                     <td><span class="badge bg-secondary">#{{ o.id }}</span></td>
                     <td>
-                        <button type="button" class="profit-summary-customer" onclick="showProfitOrderDetails('{{ o.id }}')">
+                        <a class="profit-summary-customer" href="/orders?open_order={{ o.id }}">
                             {{ o.customer_name if o.customer_name else 'ไม่มีชื่อ' }}
-                        </button>
+                        </a>
                     </td>
                     <td class="text-end text-success">฿{{ "{:,.2f}".format(o.total_revenue) }}</td>
                     <td class="text-end text-danger">฿{{ "{:,.2f}".format(o.total_cost) }}</td>
                     <td class="text-end fw-bold text-primary pe-4">฿{{ "{:,.2f}".format(o.profit) }}</td>
                 </tr>
-                <script id="profit-order-{{ o.id }}" type="application/json">
-                    {
-                        "id": {{ o.id }},
-                        "customer": {{ (o.customer_name or 'ไม่มีชื่อ')|tojson }},
-                        "date": {{ (o.created_at.strftime('%Y-%m-%d') if o.created_at else '-')|tojson }},
-                        "revenue": {{ o.total_revenue }},
-                        "cost": {{ o.total_cost }},
-                        "profit": {{ o.profit }},
-                        "items": [
-                            {% for item in o.items %}
-                            {
-                                "name": {{ item.product.name|tojson }},
-                                "qty": {{ item.sell_qty }},
-                                "price": {{ item.sell_price_per_unit }}
-                            }{% if not loop.last %},{% endif %}
-                            {% endfor %}
-                        ]
-                    }
-                </script>
                 {% else %}
                 <tr>
                     <td colspan="6" class="text-center py-5 text-muted">ไม่มีข้อมูลออเดอร์ในช่วงเวลานี้</td>
@@ -160,7 +127,7 @@
         </div>
         <div class="profit-mobile-list d-md-none">
             {% for o in orders %}
-            <button type="button" class="profit-mobile-order" onclick="showProfitOrderDetails('{{ o.id }}')">
+            <a class="profit-mobile-order text-decoration-none" href="/orders?open_order={{ o.id }}">
                 <span class="profit-mobile-heading">
                     <span class="profit-mobile-customer">{{ o.customer_name if o.customer_name else 'ไม่มีชื่อ' }}</span>
                     <span class="badge bg-secondary flex-shrink-0">#{{ o.id }}</span>
@@ -170,7 +137,7 @@
                     <span class="text-success">ขาย ฿{{ '{:,.2f}'.format(o.total_revenue) }}</span>
                     <span class="{{ 'text-success' if o.profit >= 0 else 'text-danger' }}">กำไร {{ '+฿' if o.profit >= 0 else '฿' }}{{ '{:,.2f}'.format(o.profit) }}</span>
                 </span>
-            </button>
+            </a>
             {% else %}
             <div class="text-center py-5 text-muted">ไม่มีข้อมูลออเดอร์ในช่วงเวลานี้</div>
             {% endfor %}
@@ -178,69 +145,4 @@
     </div>
 </div>
 
-<div class="modal fade" id="profitOrderModal" tabindex="-1" aria-labelledby="profitOrderTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div>
-                    <h5 class="modal-title fw-bold" id="profitOrderTitle">รายละเอียดออเดอร์</h5>
-                    <div class="small text-muted" id="profitOrderSubtitle"></div>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
-            </div>
-            <div class="modal-body">
-                <div id="profitOrderItems" class="mb-3"></div>
-                <dl class="row mb-0">
-                    <dt class="col-6 text-muted">ยอดขายรวม</dt><dd class="col-6 text-end text-success" id="profitOrderRevenue"></dd>
-                    <dt class="col-6 text-muted">ต้นทุนรวม</dt><dd class="col-6 text-end text-danger" id="profitOrderCost"></dd>
-                    <dt class="col-6 fw-bold">กำไรสุทธิ</dt><dd class="col-6 text-end fw-bold" id="profitOrderProfit"></dd>
-                </dl>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">ปิด</button>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    function showProfitOrderDetails(orderId) {
-        const order = JSON.parse(document.getElementById(`profit-order-${orderId}`).textContent);
-        const formatMoney = value => `฿${Number(value).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        const itemsContainer = document.getElementById('profitOrderItems');
-
-        document.getElementById('profitOrderTitle').textContent = `ออเดอร์ #${order.id}`;
-        document.getElementById('profitOrderSubtitle').textContent = `${order.customer} · ${order.date}`;
-        document.getElementById('profitOrderRevenue').textContent = formatMoney(order.revenue);
-        document.getElementById('profitOrderCost').textContent = formatMoney(order.cost);
-        const profitElement = document.getElementById('profitOrderProfit');
-        profitElement.textContent = `${order.profit >= 0 ? '+' : ''}${formatMoney(order.profit)}`;
-        profitElement.className = `col-6 text-end fw-bold ${order.profit >= 0 ? 'text-success' : 'text-danger'}`;
-
-        itemsContainer.replaceChildren();
-        order.items.forEach(item => {
-            const row = document.createElement('div');
-            row.className = 'profit-detail-item';
-
-            const name = document.createElement('span');
-            name.className = 'profit-detail-name';
-            name.textContent = item.name;
-
-            const total = document.createElement('strong');
-            total.className = 'text-nowrap';
-            total.textContent = formatMoney(item.price * item.qty);
-
-            const quantity = document.createElement('span');
-            quantity.className = 'small text-muted';
-            quantity.textContent = `${item.qty} ชิ้น × ${formatMoney(item.price)}`;
-
-            row.append(name, total, quantity);
-            itemsContainer.appendChild(row);
-        });
-
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('profitOrderModal')).show();
-    }
-</script>
 {% endblock %}

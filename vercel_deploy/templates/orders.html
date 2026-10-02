@@ -114,6 +114,8 @@
     </button>
 </div>
 
+<span id="openOrderRequest" data-order-id="{{ open_order_id or '' }}" hidden></span>
+
 <div class="modal fade" id="createOrderModal" tabindex="-1" data-bs-focus="false" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content shadow-lg" style="border-radius: 15px;">
@@ -292,7 +294,13 @@
                             </thead>
                             <tbody>
                                 {% for o in orders %}
-                                <tr style="cursor: pointer;" class="order-row" onclick="showDetails('{{ o.id }}', '{{ o.customer_name }}', '{{ o.created_at.strftime('%Y-%m-%d') }}', '{{ o.total_revenue }}', '{{ o.total_cost }}', '{{ o.profit }}', '{{ o.id }}')">
+                                <tr style="cursor: pointer;" class="order-row"
+                                    data-order-id="{{ o.id }}"
+                                    data-customer="{{ o.customer_name or '' }}"
+                                    data-order-date="{{ o.created_at.strftime('%Y-%m-%d') }}"
+                                    data-revenue="{{ o.total_revenue }}"
+                                    data-cost="{{ o.total_cost }}"
+                                    data-profit="{{ o.profit }}">
                                     <td style="padding: 1rem;"><span class="badge bg-secondary">#{{ o.id }}</span></td>
                                     <td class="text-muted small" style="padding: 1rem;">{{ o.created_at.strftime('%Y-%m-%d') }}</td>
                                     <td style="padding: 1rem;"><strong>{{ o.customer_name if o.customer_name else 'ไม่มีชื่อ' }}</strong></td>
@@ -711,6 +719,21 @@
         });
 
         new bootstrap.Modal(document.getElementById('viewOrderModal')).show();
+    }
+
+    document.querySelectorAll('.order-row').forEach(row => {
+        row.addEventListener('click', function() {
+            const order = this.dataset;
+            showDetails(order.orderId, order.customer, order.orderDate, order.revenue, order.cost, order.profit, order.orderId);
+        });
+    });
+
+    const openOrderId = document.getElementById('openOrderRequest').dataset.orderId;
+    if (openOrderId) {
+        document.addEventListener('DOMContentLoaded', function() {
+            const orderRow = document.querySelector(`.order-row[data-order-id="${openOrderId}"]`);
+            if (orderRow) orderRow.click();
+        });
     }
 
     async function saveOrderUpdates() {
