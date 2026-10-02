@@ -112,13 +112,14 @@
                     <td class="ps-4 text-muted small">{{ o.created_at.strftime('%Y-%m-%d') if o.created_at else '-' }}</td>
                     <td><span class="badge bg-secondary">#{{ o.id }}</span></td>
                     <td>
-                        <button type="button" class="profit-summary-customer order-detail-trigger"
+                        <button type="button" class="profit-summary-customer"
                             data-order-id="{{ o.id }}"
                             data-customer="{{ o.customer_name or '' }}"
                             data-order-date="{{ o.created_at.strftime('%Y-%m-%d') if o.created_at else '-' }}"
                             data-revenue="{{ o.total_revenue }}"
                             data-cost="{{ o.total_cost }}"
-                            data-profit="{{ o.profit }}">
+                            data-profit="{{ o.profit }}"
+                            onclick="showDetailsFromTrigger(this)">
                             {{ o.customer_name if o.customer_name else 'ไม่มีชื่อ' }}
                         </button>
                     </td>
@@ -150,13 +151,14 @@
         </div>
         <div class="profit-mobile-list d-md-none">
             {% for o in orders %}
-            <button type="button" class="profit-mobile-order order-detail-trigger"
+            <button type="button" class="profit-mobile-order"
                 data-order-id="{{ o.id }}"
                 data-customer="{{ o.customer_name or '' }}"
                 data-order-date="{{ o.created_at.strftime('%Y-%m-%d') if o.created_at else '-' }}"
                 data-revenue="{{ o.total_revenue }}"
                 data-cost="{{ o.total_cost }}"
-                data-profit="{{ o.profit }}">
+                data-profit="{{ o.profit }}"
+                onclick="showDetailsFromTrigger(this)">
                 <span class="profit-mobile-heading">
                     <span class="profit-mobile-customer">{{ o.customer_name if o.customer_name else 'ไม่มีชื่อ' }}</span>
                     <span class="badge bg-secondary flex-shrink-0">#{{ o.id }}</span>

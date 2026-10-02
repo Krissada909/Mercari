@@ -260,13 +260,14 @@
                 <div class="mobile-order-list d-md-none">
                     {% if orders %}
                         {% for o in orders %}
-                        <button type="button" class="mobile-order-item order-detail-trigger"
+                        <button type="button" class="mobile-order-item"
                             data-order-id="{{ o.id }}"
                             data-customer="{{ o.customer_name or '' }}"
                             data-revenue="{{ o.total_revenue }}"
                             data-cost="{{ o.total_cost }}"
                             data-profit="{{ o.profit }}"
-                            data-order-date="{{ o.created_at.strftime('%Y-%m-%d') }}">
+                            data-order-date="{{ o.created_at.strftime('%Y-%m-%d') }}"
+                            onclick="showDetailsFromTrigger(this)">
                             <span class="mobile-order-copy">
                                 <span class="d-flex justify-content-between gap-2">
                                     <span class="mobile-order-name">#{{ o.id }} · {{ o.customer_name if o.customer_name else 'ไม่มีชื่อ' }}</span>
