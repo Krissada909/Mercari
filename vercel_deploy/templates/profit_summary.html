@@ -134,7 +134,7 @@
                             "name": {{ item.product.name|tojson }},
                             "qty": {{ item.sell_qty }},
                             "price": {{ item.sell_price_per_unit }},
-                            "img": {{ (item.product.image_path or '')|tojson }}
+                            "img": {{ (item.product.image_path or '')|media_url|tojson }}
                         }{% if not loop.last %},{% endif %}
                         {% endfor %}
                     ]

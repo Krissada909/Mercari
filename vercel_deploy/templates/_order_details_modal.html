@@ -8,6 +8,15 @@
         background-color: #f8fafc;
     }
     .view-item-row .item-img { width: 48px; height: 48px; margin-right: 0; }
+    .view-item-row .product-detail-image,
+    .view-item-row .product-detail-placeholder {
+        width: 64px;
+        height: 64px;
+        flex: 0 0 64px;
+        border-radius: 8px;
+    }
+    .view-item-row .product-detail-image { object-fit: cover; }
+    .view-item-row .product-detail-placeholder { color: #64748b; }
     @media (max-width: 767.98px) {
         #viewOrderModal .modal-dialog { margin: 0.5rem; }
         #viewOrderModal .modal-content { max-height: calc(100dvh - 1rem); }
